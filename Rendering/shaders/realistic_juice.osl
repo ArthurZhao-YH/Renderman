@@ -1,0 +1,136 @@
+// realistic_juice.osl
+
+#include "stdosl.h"
+
+shader realistic_juice(
+    color juiceBaseColor = color(1.0, 0.55, 0.30),
+    color juiceDarkColor = color(0.95, 0.45, 0.20),
+    float colorIntensity = 0.85,
+
+    float pulpScale = 8.5,
+    float pulpDensity = 0.35,
+    float pulpSize = 0.12,
+    float pulpThreshold = 0.65,
+    color pulpColor = color(1.0, 0.65, 0.40),
+
+    float suspensionScale = 25.0,
+    float suspensionDensity = 0.15,
+    float suspensionThreshold = 0.82,
+
+    float turbidity = 0.28,
+    float absorptionDepth = 2.5,
+    color absorptionColor = color(1.0, 0.50, 0.25),
+
+    float ior = 1.34,
+    float refractionStrength = 1.0,
+    float transmissionGain = 0.88,
+
+    float specularRoughness = 0.02,
+    float specularGain = 0.95,
+    color specularTint = color(1.0, 0.95, 0.90),
+
+    float sssGain = 0.42,
+    color sssColor = color(1.0, 0.60, 0.35),
+    float sssDmfp = 1.2,
+
+    float bubbleScale = 45.0,
+    float bubbleDensity = 0.08,
+    float bubbleThreshold = 0.92,
+
+    float flowScale = 3.5,
+    float flowSpeed = 0.5,
+    float flowStrength = 0.15,
+
+    output color outColor = 0,
+    output color diffuseColor = 0,
+    output color transmissionColor = 0,
+    output color subsurfaceColor = 0,
+    output float roughness = 0.02,
+    output float transmission = 0.88,
+    output float sss = 0.42
+)
+{
+
+    point Pworld = transform("world", P);
+
+
+    float animTime = 0.0;
+    point Pflow = Pworld * flowScale;
+    vector flowOffset = vector(
+        noise("perlin", Pflow + animTime * flowSpeed) - 0.5,
+        noise("perlin", Pflow * 1.3 + animTime * flowSpeed + 17.5) - 0.5,
+        noise("perlin", Pflow * 1.7 + animTime * flowSpeed + 39.2) - 0.5
+    ) * flowStrength;
+
+    point Pdisturbed = Pworld + flowOffset;
+
+    point Ppulp = Pdisturbed * pulpScale;
+    float pulpNoise = noise("cell", Ppulp);
+    float pulpWorley = 1.0 - pulpNoise;  // Worley/cell noise 模拟颗粒
+
+    float pulp1 = noise("perlin", Ppulp * 1.5);
+    float pulp2 = noise("perlin", Ppulp * 2.7 + 13.4);
+    float pulpPattern = pulpWorley * 0.6 + pulp1 * 0.25 + pulp2 * 0.15;
+
+    float pulpMask = smoothstep(pulpThreshold, pulpThreshold + 0.05, pulpPattern);
+    pulpMask *= pulpDensity;
+
+    point Psusp = Pdisturbed * suspensionScale;
+    float suspNoise1 = noise("perlin", Psusp);
+    float suspNoise2 = noise("perlin", Psusp * 2.1 + 27.3);
+    float suspNoise3 = noise("cell", Psusp * 0.8);
+    float suspPattern = suspNoise1 * 0.5 + suspNoise2 * 0.3 + suspNoise3 * 0.2;
+
+    float suspMask = smoothstep(suspensionThreshold, suspensionThreshold + 0.03, suspPattern);
+    suspMask *= suspensionDensity;
+
+    point Pbubble = Pdisturbed * bubbleScale;
+    float bubbleNoise = noise("cell", Pbubble);
+    float bubbleMask = smoothstep(bubbleThreshold, bubbleThreshold + 0.02, bubbleNoise);
+    bubbleMask *= bubbleDensity;
+
+    point Pturb = Pdisturbed * 4.5;
+    float turbNoise = noise("perlin", Pturb) * 0.5 +
+                      noise("perlin", Pturb * 2.3 + 11.7) * 0.3 +
+                      noise("perlin", Pturb * 4.1 + 23.9) * 0.2;
+    float turbidityVar = turbidity * (0.7 + turbNoise * 0.6);
+
+
+    vector Iview = normalize(I);
+    vector Nf = normalize(faceforward(N, Iview));
+    float NdotV = abs(dot(Nf, -Iview));
+
+    float depthFactor = 1.0 - pow(NdotV, 0.5);
+
+    color baseColor = mix(juiceBaseColor, juiceDarkColor, turbidityVar);
+
+    color finalColor = mix(baseColor, pulpColor, pulpMask * 0.7);
+
+    finalColor = mix(finalColor, finalColor * 0.85, suspMask);
+
+    finalColor = mix(finalColor, finalColor * 1.3, bubbleMask);
+
+    finalColor = finalColor * colorIntensity;
+
+    color absorptionFilter = pow(absorptionColor, 1.0 / max(absorptionDepth * (1.0 + depthFactor), 0.1));
+    color transmitColor = finalColor * absorptionFilter;
+
+    color sssColorFinal = mix(sssColor, pulpColor, pulpMask * 0.3);
+
+    float surfaceRoughness = specularRoughness + pulpMask * 0.05 + bubbleMask * 0.03;
+    surfaceRoughness = clamp(surfaceRoughness, 0.01, 0.15);
+
+    float transmitStrength = transmissionGain * (1.0 - pulpMask * 0.3 - suspMask * 0.2);
+    transmitStrength = clamp(transmitStrength, 0.3, 1.0);
+
+    float sssStrength = sssGain * (1.0 + pulpMask * 0.8 + suspMask * 0.3);
+    sssStrength = clamp(sssStrength, 0.0, 1.0);
+
+    outColor = finalColor;
+    diffuseColor = finalColor * (turbidityVar + pulpMask * 0.5);
+    transmissionColor = transmitColor;
+    subsurfaceColor = sssColorFinal;
+    roughness = surfaceRoughness;
+    transmission = transmitStrength;
+    sss = sssStrength;
+}

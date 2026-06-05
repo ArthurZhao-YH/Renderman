@@ -1,0 +1,723 @@
+OpenShadingLanguage 1.00
+# Compiled by oslc 1.13.0.@PROJECT_VERSION_TWEAK@"dev"
+# options: -o shaders\realistic_wood_table.oso
+shader realistic_wood_table
+param	string	woodTexture	"wood.tex"		%read{32,32} %write{2147483647,-1}
+param	string	normalTexture	"table_normal.tex"		%read{33,33} %write{2147483647,-1}
+param	string	displacementTexture	"table_displacement.tex"		%read{34,34} %write{2147483647,-1}
+param	float	textureRepeatU	4		%read{1,1} %write{2147483647,-1} %derivs
+param	float	textureRepeatV	1.5		%read{2,2} %write{2147483647,-1} %derivs
+param	float	textureRotation	0		%read{3,6} %write{2147483647,-1} %derivs
+param	float	grainScale	45		%read{51,178} %write{2147483647,-1}
+param	float	grainDetail	3.5		%read{2147483647,-1} %write{2147483647,-1}
+param	float	grainDistortion	0.349999994		%read{72,72} %write{2147483647,-1}
+param	float	grainContrast	0.649999976		%read{75,75} %write{2147483647,-1}
+param	float	fineNoiseScale	180		%read{77,77} %write{2147483647,-1}
+param	float	fineNoiseStrength	0.150000006		%read{117,117} %write{2147483647,-1}
+param	float	plankWidth	4.5		%read{19,21} %write{2147483647,-1}
+param	float	plankVariation	0.25		%read{26,26} %write{2147483647,-1}
+param	float	seamWidth	0.0149999997		%read{27,29} %write{2147483647,-1}
+param	float	seamDepth	0.0799999982		%read{127,154} %write{2147483647,-1}
+param	float	scratchScale	95		%read{85,85} %write{2147483647,-1}
+param	float	scratchStrength	0.550000012		%read{108,108} %write{2147483647,-1}
+param	float	scratchThreshold	0.819999993		%read{104,105} %write{2147483647,-1}
+param	float	poreScale	420		%read{109,109} %write{2147483647,-1}
+param	float	poreStrength	0.280000001		%read{115,115} %write{2147483647,-1}
+param	float	poreThreshold	0.879999995		%read{111,112} %write{2147483647,-1}
+param	float	bumpScale	0.0450000018		%read{188,193} %write{2147483647,-1}
+param	float	displacementScale	0.0120000001		%read{159,159} %write{2147483647,-1}
+param	float	normalMapStrength	0.779999971		%read{223,223} %write{2147483647,-1}
+param	float	displacementMapStrength	0.620000005		%read{157,157} %write{2147483647,-1}
+param	float	normalFlipY	1		%read{202,202} %write{2147483647,-1}
+param	float	baseRoughness	0.680000007		%read{141,141} %write{2147483647,-1}
+param	float	grainRoughnessVariation	0.25		%read{140,140} %write{2147483647,-1}
+param	float	scratchRoughnessBoost	0.349999994		%read{142,142} %write{2147483647,-1}
+param	color	darkWoodTint	0.0799999982 0.0399999991 0.0179999992		%read{123,123} %write{2147483647,-1}
+param	color	lightWoodTint	0.850000024 0.579999983 0.280000001		%read{123,123} %write{2147483647,-1}
+param	float	colorVariation	0.180000007		%read{2147483647,-1} %write{2147483647,-1}
+oparam	color	diffuseColor	0 0 0		%read{2147483647,-1} %write{136,136}
+oparam	color	specularColor	0 0 0		%read{2147483647,-1} %write{138,138}
+oparam	float	roughness	0.5		%read{143,147} %write{141,148}
+oparam	normal	outNormal	0 0 0		%read{2147483647,-1} %write{0,225} %initexpr
+oparam	float	displacement	0		%read{2147483647,-1} %write{159,159}
+global	point	P	%read{51,184} %write{2147483647,-1} %derivs
+global	normal	N	%read{0,215} %write{2147483647,-1}
+global	float	u	%read{1,1} %write{2147483647,-1} %derivs
+global	float	v	%read{2,2} %write{2147483647,-1} %derivs
+global	vector	dPdu	%read{207,207} %write{2147483647,-1}
+global	vector	dPdv	%read{208,208} %write{2147483647,-1}
+local	float	uu	%read{9,34} %write{1,14} %derivs
+local	float	vv	%read{10,34} %write{2,18} %derivs
+local	float	___345_rad	%read{7,8} %write{6,6} %derivs
+local	float	___345_cosR	%read{11,16} %write{7,7} %derivs
+local	float	___345_sinR	%read{12,15} %write{8,8} %derivs
+local	float	___345_uuCentered	%read{11,15} %write{9,9} %derivs
+local	float	___345_vvCentered	%read{12,16} %write{10,10} %derivs
+local	float	plankID	%read{22,23} %write{20,20}
+local	float	plankV	%read{27,28} %write{22,22}
+local	float	plankRandom	%read{25,53} %write{24,24}
+local	float	plankColorShift	%read{119,119} %write{26,26}
+local	float	seamMask	%read{31,31} %write{30,30}
+local	float	seamFactor	%read{127,154} %write{31,31}
+local	color	baseTexture	%read{35,124} %write{32,32}
+local	color	normalTextureColor	%read{196,203} %write{33,33}
+local	color	displacementTextureColor	%read{43,48} %write{34,34}
+local	float	textureLuminance	%read{116,116} %write{42,42}
+local	float	mapHeight	%read{156,156} %write{50,50}
+local	point	Pscaled	%read{52,70} %write{51,51}
+local	float	grain1	%read{65,65} %write{58,58}
+local	float	grain2	%read{66,66} %write{61,61}
+local	float	grain3	%read{68,68} %write{64,64}
+local	float	grainPattern	%read{73,116} %write{69,76}
+local	float	distortion	%read{73,73} %write{72,72}
+local	point	PFine	%read{78,80} %write{77,77}
+local	float	fineNoise	%read{117,117} %write{84,84}
+local	point	PScratch	%read{86,97} %write{85,85}
+local	float	scratch1	%read{101,101} %write{91,91}
+local	float	scratch2	%read{102,102} %write{100,100}
+local	float	scratchPattern	%read{108,150} %write{107,108}
+local	point	PPore	%read{110,110} %write{109,109}
+local	float	poreNoise	%read{111,111} %write{110,110}
+local	float	porePattern	%read{115,152} %write{114,115}
+local	float	combinedGrain	%read{118,149} %write{116,122}
+local	color	woodColor	%read{126,137} %write{123,135}
+local	float	grainRoughness	%read{141,141} %write{140,140}
+local	float	proceduralHeight	%read{158,158} %write{155,155}
+local	float	heightField	%read{159,159} %write{158,158}
+local	float	bumpOffset	%read{161,181} %write{160,160}
+local	float	dhdu	%read{187,187} %write{171,171}
+local	float	dhdv	%read{192,192} %write{182,182}
+local	vector	tangentU	%read{190,190} %write{183,183}
+local	vector	tangentV	%read{185,185} %write{184,184}
+local	normal	Nperturbed	%read{221,221} %write{195,195}
+local	vector	tangentNormal	%read{209,214} %write{206,206}
+local	vector	Tu	%read{210,210} %write{207,207}
+local	vector	Tv	%read{212,212} %write{208,208}
+local	normal	mapNormal	%read{222,222} %write{220,220}
+const	float	$const1	0		%read{3,176} %write{2147483647,-1}
+temp	int	$tmp1	%read{4,4} %write{3,3}
+const	string	$const2	"radians"		%read{5,5} %write{2147483647,-1}
+const	float	$const3	0.0174532924		%read{6,6} %write{2147483647,-1}
+const	float	$const4	0.5		%read{9,156} %write{2147483647,-1}
+temp	float	$tmp2	%read{13,13} %write{11,11} %derivs
+temp	float	$tmp3	%read{13,13} %write{12,12} %derivs
+temp	float	$tmp4	%read{14,14} %write{13,13} %derivs
+temp	float	$tmp5	%read{17,17} %write{15,15} %derivs
+temp	float	$tmp6	%read{17,17} %write{16,16} %derivs
+temp	float	$tmp7	%read{18,18} %write{17,17} %derivs
+temp	float	$tmp8	%read{20,20} %write{19,19}
+temp	float	$tmp9	%read{22,22} %write{21,21}
+const	string	$const5	"perlin"		%read{24,179} %write{2147483647,-1}
+const	float	$const6	7.32000017		%read{23,23} %write{2147483647,-1}
+temp	float	$tmp10	%read{24,24} %write{23,23}
+temp	float	$tmp11	%read{26,26} %write{25,25}
+temp	float	$tmp12	%read{30,30} %write{27,27}
+temp	float	$tmp13	%read{30,30} %write{29,29}
+const	float	$const7	1		%read{28,205} %write{2147483647,-1}
+temp	float	$tmp14	%read{29,29} %write{28,28}
+const	int	$const8	0		%read{35,209} %write{2147483647,-1}
+temp	float	$tmp15	%read{36,36} %write{35,35}
+const	float	$const9	0.300000012		%read{36,150} %write{2147483647,-1}
+temp	float	$tmp16	%read{39,39} %write{36,36}
+const	int	$const10	1		%read{37,211} %write{2147483647,-1}
+temp	float	$tmp17	%read{38,38} %write{37,37}
+const	float	$const11	0.589999974		%read{38,46} %write{2147483647,-1}
+temp	float	$tmp18	%read{39,39} %write{38,38}
+temp	float	$tmp19	%read{42,42} %write{39,39}
+const	int	$const12	2		%read{40,214} %write{2147483647,-1}
+temp	float	$tmp20	%read{41,41} %write{40,40}
+const	float	$const13	0.109999999		%read{41,49} %write{2147483647,-1}
+temp	float	$tmp21	%read{42,42} %write{41,41}
+temp	float	$tmp22	%read{44,44} %write{43,43}
+temp	float	$tmp23	%read{47,47} %write{44,44}
+temp	float	$tmp24	%read{46,46} %write{45,45}
+temp	float	$tmp25	%read{47,47} %write{46,46}
+temp	float	$tmp26	%read{50,50} %write{47,47}
+temp	float	$tmp27	%read{49,49} %write{48,48}
+temp	float	$tmp28	%read{50,50} %write{49,49}
+temp	point	$tmp29	%read{58,58} %write{57,57}
+temp	float	$tmp30	%read{54,54} %write{52,52}
+const	float	$const14	10		%read{53,53} %write{2147483647,-1}
+temp	float	$tmp31	%read{54,54} %write{53,53}
+temp	float	$tmp32	%read{57,57} %write{54,54}
+temp	float	$tmp33	%read{57,57} %write{55,55}
+temp	float	$tmp34	%read{57,57} %write{56,56}
+const	float	$const15	2.0999999		%read{59,59} %write{2147483647,-1}
+temp	point	$tmp35	%read{60,60} %write{59,59}
+const	point	$const16	13.6999998 0 0		%read{60,60} %write{2147483647,-1}
+temp	point	$tmp37	%read{61,61} %write{60,60}
+const	float	$const17	4.30000019		%read{62,62} %write{2147483647,-1}
+temp	point	$tmp38	%read{63,63} %write{62,62}
+const	point	$const18	27.3999996 0 0		%read{63,63} %write{2147483647,-1}
+temp	point	$tmp40	%read{64,64} %write{63,63}
+const	float	$const19	0.600000024		%read{65,79} %write{2147483647,-1}
+temp	float	$tmp41	%read{67,67} %write{65,65}
+const	float	$const20	0.25		%read{66,133} %write{2147483647,-1}
+temp	float	$tmp42	%read{67,67} %write{66,66}
+temp	float	$tmp43	%read{69,69} %write{67,67}
+const	float	$const21	0.150000006		%read{68,144} %write{2147483647,-1}
+temp	float	$tmp44	%read{69,69} %write{68,68}
+temp	float	$tmp45	%read{72,72} %write{71,71}
+const	string	$const22	"cell"		%read{71,110} %write{2147483647,-1}
+const	float	$const23	0.699999988		%read{70,101} %write{2147483647,-1}
+temp	point	$tmp46	%read{71,71} %write{70,70}
+temp	float	$tmp47	%read{76,76} %write{74,74}
+temp	float	$tmp48	%read{74,74} %write{73,73}
+temp	float	$tmp49	%read{76,76} %write{75,75}
+temp	float	$tmp50	%read{79,79} %write{78,78}
+temp	float	$tmp51	%read{84,84} %write{79,79}
+temp	float	$tmp52	%read{83,83} %write{82,82}
+const	float	$const24	2.29999995		%read{80,80} %write{2147483647,-1}
+temp	point	$tmp53	%read{81,81} %write{80,80}
+const	float	$const25	17.5		%read{81,81} %write{2147483647,-1}
+temp	point	$tmp54	%read{82,82} %write{81,81}
+const	float	$const26	0.400000006		%read{83,124} %write{2147483647,-1}
+temp	float	$tmp55	%read{84,84} %write{83,83}
+temp	point	$tmp56	%read{91,91} %write{90,90}
+temp	float	$tmp57	%read{90,90} %write{86,86}
+temp	float	$tmp58	%read{88,88} %write{87,87}
+const	float	$const27	0.0199999996		%read{88,88} %write{2147483647,-1}
+temp	float	$tmp59	%read{90,90} %write{88,88}
+temp	float	$tmp60	%read{90,90} %write{89,89}
+temp	point	$tmp61	%read{100,100} %write{99,99}
+temp	float	$tmp62	%read{93,93} %write{92,92}
+const	float	$const28	2.70000005		%read{93,98} %write{2147483647,-1}
+temp	float	$tmp63	%read{94,94} %write{93,93}
+const	float	$const29	41.2999992		%read{94,94} %write{2147483647,-1}
+temp	float	$tmp64	%read{99,99} %write{94,94}
+temp	float	$tmp65	%read{96,96} %write{95,95}
+const	float	$const30	0.0299999993		%read{96,96} %write{2147483647,-1}
+temp	float	$tmp66	%read{99,99} %write{96,96}
+temp	float	$tmp67	%read{98,98} %write{97,97}
+temp	float	$tmp68	%read{99,99} %write{98,98}
+temp	float	$tmp69	%read{103,103} %write{101,101}
+temp	float	$tmp70	%read{103,103} %write{102,102}
+temp	float	$tmp71	%read{104,104} %write{103,103}
+temp	float	$tmp72	%read{106,106} %write{104,104}
+temp	float	$tmp73	%read{106,106} %write{105,105}
+temp	float	$tmp74	%read{107,107} %write{106,106}
+temp	float	$tmp75	%read{113,113} %write{111,111}
+temp	float	$tmp76	%read{113,113} %write{112,112}
+temp	float	$tmp77	%read{114,114} %write{113,113}
+const	float	$const31	0.449999988		%read{116,116} %write{2147483647,-1}
+temp	float	$tmp78	%read{118,118} %write{117,117}
+const	string	$const32	"clamp"		%read{120,146} %write{2147483647,-1}
+temp	float	$tmp79	%read{122,122} %write{121,121}
+temp	color	$tmp80	%read{125,125} %write{124,124}
+const	color	$const33	0.600000024 0.600000024 0.600000024		%read{125,125} %write{2147483647,-1}
+temp	color	$tmp82	%read{126,126} %write{125,125}
+temp	float	$tmp83	%read{128,128} %write{127,127}
+temp	float	$tmp84	%read{129,129} %write{128,128}
+temp	float	$tmp85	%read{131,131} %write{130,130}
+temp	float	$tmp86	%read{132,132} %write{131,131}
+temp	float	$tmp87	%read{134,134} %write{133,133}
+temp	float	$tmp88	%read{135,135} %write{134,134}
+const	color	$const34	1 1 1		%read{138,138} %write{2147483647,-1}
+const	float	$const35	1.79999995		%read{137,137} %write{2147483647,-1}
+temp	color	$tmp90	%read{138,138} %write{137,137}
+temp	float	$tmp91	%read{140,140} %write{139,139}
+temp	float	$tmp92	%read{143,143} %write{142,142}
+temp	float	$tmp93	%read{145,145} %write{144,144}
+const	float	$const36	0.100000001		%read{148,148} %write{2147483647,-1}
+const	float	$const37	0.949999988		%read{147,147} %write{2147483647,-1}
+temp	float	$tmp94	%read{148,148} %write{147,147}
+temp	float	$tmp95	%read{151,151} %write{149,149}
+temp	float	$tmp96	%read{151,151} %write{150,150}
+temp	float	$tmp97	%read{153,153} %write{151,151}
+temp	float	$tmp98	%read{153,153} %write{152,152}
+temp	float	$tmp99	%read{155,155} %write{153,153}
+temp	float	$tmp100	%read{155,155} %write{154,154}
+temp	float	$tmp101	%read{157,157} %write{156,156}
+temp	float	$tmp102	%read{158,158} %write{157,157}
+const	float	$const38	0.00999999978		%read{160,160} %write{2147483647,-1}
+temp	float	$tmp103	%read{169,169} %write{164,164}
+temp	vector	$tmp104	%read{162,162} %write{161,161}
+temp	point	$tmp105	%read{163,163} %write{162,162}
+temp	point	$tmp106	%read{164,164} %write{163,163}
+temp	float	$tmp107	%read{169,169} %write{168,168}
+temp	vector	$tmp108	%read{166,166} %write{165,165}
+temp	point	$tmp109	%read{167,167} %write{166,166}
+temp	point	$tmp110	%read{168,168} %write{167,167}
+temp	float	$tmp111	%read{171,171} %write{169,169}
+const	float	$const39	2		%read{170,204} %write{2147483647,-1}
+temp	float	$tmp112	%read{171,171} %write{170,170}
+temp	float	$tmp113	%read{180,180} %write{175,175}
+temp	vector	$tmp114	%read{173,173} %write{172,172}
+temp	point	$tmp115	%read{174,174} %write{173,173}
+temp	point	$tmp116	%read{175,175} %write{174,174}
+temp	float	$tmp117	%read{180,180} %write{179,179}
+temp	vector	$tmp118	%read{177,177} %write{176,176}
+temp	point	$tmp119	%read{178,178} %write{177,177}
+temp	point	$tmp120	%read{179,179} %write{178,178}
+temp	float	$tmp121	%read{182,182} %write{180,180}
+temp	float	$tmp122	%read{182,182} %write{181,181}
+temp	vector	$tmp123	%read{187,187} %write{186,186}
+temp	vector	$tmp124	%read{186,186} %write{185,185}
+temp	vector	$tmp125	%read{188,188} %write{187,187}
+temp	vector	$tmp126	%read{189,189} %write{188,188}
+temp	normal	$tmp127	%read{194,194} %write{189,189}
+temp	vector	$tmp128	%read{192,192} %write{191,191}
+temp	vector	$tmp129	%read{191,191} %write{190,190}
+temp	vector	$tmp130	%read{193,193} %write{192,192}
+temp	vector	$tmp131	%read{194,194} %write{193,193}
+temp	normal	$tmp132	%read{195,195} %write{194,194}
+temp	float	$tmp133	%read{197,197} %write{196,196}
+temp	float	$tmp134	%read{198,198} %write{197,197}
+temp	float	$tmp135	%read{206,206} %write{198,198}
+temp	float	$tmp136	%read{200,200} %write{199,199}
+temp	float	$tmp137	%read{201,201} %write{200,200}
+temp	float	$tmp138	%read{202,202} %write{201,201}
+temp	float	$tmp139	%read{206,206} %write{202,202}
+temp	float	$tmp140	%read{204,204} %write{203,203}
+temp	float	$tmp141	%read{205,205} %write{204,204}
+temp	float	$tmp142	%read{206,206} %write{205,205}
+temp	vector	$tmp143	%read{220,220} %write{219,219}
+temp	float	$tmp144	%read{210,210} %write{209,209}
+temp	vector	$tmp145	%read{213,213} %write{210,210}
+temp	float	$tmp146	%read{212,212} %write{211,211}
+temp	vector	$tmp147	%read{213,213} %write{212,212}
+temp	vector	$tmp148	%read{218,218} %write{213,213}
+temp	float	$tmp149	%read{217,217} %write{214,214}
+temp	vector	$tmp150	%read{217,217} %write{216,216}
+temp	vector	$tmp151	%read{216,216} %write{215,215}
+temp	vector	$tmp152	%read{218,218} %write{217,217}
+temp	vector	$tmp153	%read{219,219} %write{218,218}
+temp	vector	$tmp154	%read{225,225} %write{224,224}
+temp	vector	$tmp155	%read{224,224} %write{223,223}
+temp	vector	$tmp156	%read{223,223} %write{221,221}
+temp	vector	$tmp157	%read{223,223} %write{222,222}
+code outNormal
+# shaders\\realistic_wood_table.osl:63
+#     output float displacement = 0
+	assign		outNormal N 	%filename{"shaders\\realistic_wood_table.osl"} %line{63} %argrw{"wr"}
+code ___main___
+# shaders\\realistic_wood_table.osl:68
+#     float vv = v * textureRepeatV;
+	mul		uu u textureRepeatU 	%filename{"shaders\\realistic_wood_table.osl"} %line{68} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:69
+# 
+	mul		vv v textureRepeatV 	%line{69} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:72
+#         float rad = radians(textureRotation);
+	neq		$tmp1 textureRotation $const1 	%line{72} %argrw{"wrr"}
+	if		$tmp1 19 19 	%argrw{"r"}
+# shaders\\realistic_wood_table.osl:73
+#         float cosR = cos(rad);
+	functioncall	$const2 7 	%line{73} %argrw{"r"}
+# C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h:65
+# float  radians (float x)  { return x*(M_PI/180.0); }
+	mul		___345_rad textureRotation $const3 	%filename{"C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h"} %line{65} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:74
+#         float sinR = sin(rad);
+	cos		___345_cosR ___345_rad 	%filename{"shaders\\realistic_wood_table.osl"} %line{74} %argrw{"wr"}
+# shaders\\realistic_wood_table.osl:75
+#         float uuCentered = uu - 0.5;
+	sin		___345_sinR ___345_rad 	%line{75} %argrw{"wr"}
+# shaders\\realistic_wood_table.osl:76
+#         float vvCentered = vv - 0.5;
+	sub		___345_uuCentered uu $const4 	%line{76} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:77
+#         uu = uuCentered * cosR - vvCentered * sinR + 0.5;
+	sub		___345_vvCentered vv $const4 	%line{77} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:78
+#         vv = uuCentered * sinR + vvCentered * cosR + 0.5;
+	mul		$tmp2 ___345_uuCentered ___345_cosR 	%line{78} %argrw{"wrr"}
+	mul		$tmp3 ___345_vvCentered ___345_sinR 	%argrw{"wrr"}
+	sub		$tmp4 $tmp2 $tmp3 	%argrw{"wrr"}
+	add		uu $tmp4 $const4 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:79
+#     }
+	mul		$tmp5 ___345_uuCentered ___345_sinR 	%line{79} %argrw{"wrr"}
+	mul		$tmp6 ___345_vvCentered ___345_cosR 	%argrw{"wrr"}
+	add		$tmp7 $tmp5 $tmp6 	%argrw{"wrr"}
+	add		vv $tmp7 $const4 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:83
+#     float plankV = vv * plankWidth - plankID;
+	mul		$tmp8 vv plankWidth 	%line{83} %argrw{"wrr"}
+	floor		plankID $tmp8 	%argrw{"wr"}
+# shaders\\realistic_wood_table.osl:84
+# 
+	mul		$tmp9 vv plankWidth 	%line{84} %argrw{"wrr"}
+	sub		plankV $tmp9 plankID 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:87
+#     float plankColorShift = (plankRandom - 0.5) * plankVariation;
+	mul		$tmp10 plankID $const6 	%line{87} %argrw{"wrr"}
+	noise		plankRandom $const5 $tmp10 $const1 	%argrw{"wrrr"}
+# shaders\\realistic_wood_table.osl:88
+# 
+	sub		$tmp11 plankRandom $const4 	%line{88} %argrw{"wrr"}
+	mul		plankColorShift $tmp11 plankVariation 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:91
+#                      smoothstep(0.0, seamWidth, 1.0 - plankV);
+	smoothstep	$tmp12 $const1 seamWidth plankV 	%line{91} %argrw{"wrrr"}
+# shaders\\realistic_wood_table.osl:92
+#     float seamFactor = 1.0 - seamMask;
+	sub		$tmp14 $const7 plankV 	%line{92} %argrw{"wrr"}
+	smoothstep	$tmp13 $const1 seamWidth $tmp14 	%argrw{"wrrr"}
+# shaders\\realistic_wood_table.osl:91
+#                      smoothstep(0.0, seamWidth, 1.0 - plankV);
+	mul		seamMask $tmp12 $tmp13 	%line{91} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:93
+# 
+	sub		seamFactor $const7 seamMask 	%line{93} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:96
+#     color normalTextureColor = texture(normalTexture, uu, vv);
+	texture		baseTexture woodTexture uu vv 	%line{96} %argrw{"wrrr"} %argderivs{2,3}
+# shaders\\realistic_wood_table.osl:97
+#     color displacementTextureColor = texture(displacementTexture, uu, vv);
+	texture		normalTextureColor normalTexture uu vv 	%line{97} %argrw{"wrrr"} %argderivs{2,3}
+# shaders\\realistic_wood_table.osl:98
+#     float textureLuminance = (baseTexture[0] * 0.3 + baseTexture[1] * 0.59 + baseTexture[2] * 0.11);
+	texture		displacementTextureColor displacementTexture uu vv 	%line{98} %argrw{"wrrr"} %argderivs{2,3}
+# shaders\\realistic_wood_table.osl:99
+#     float mapHeight = displacementTextureColor[0] * 0.3 +
+	compref		$tmp15 baseTexture $const8 	%line{99} %argrw{"wrr"}
+	mul		$tmp16 $tmp15 $const9 	%argrw{"wrr"}
+	compref		$tmp17 baseTexture $const10 	%argrw{"wrr"}
+	mul		$tmp18 $tmp17 $const11 	%argrw{"wrr"}
+	add		$tmp19 $tmp16 $tmp18 	%argrw{"wrr"}
+	compref		$tmp20 baseTexture $const12 	%argrw{"wrr"}
+	mul		$tmp21 $tmp20 $const13 	%argrw{"wrr"}
+	add		textureLuminance $tmp19 $tmp21 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:100
+#                       displacementTextureColor[1] * 0.59 +
+	compref		$tmp22 displacementTextureColor $const8 	%line{100} %argrw{"wrr"}
+	mul		$tmp23 $tmp22 $const9 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:101
+#                       displacementTextureColor[2] * 0.11;
+	compref		$tmp24 displacementTextureColor $const10 	%line{101} %argrw{"wrr"}
+	mul		$tmp25 $tmp24 $const11 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:100
+#                       displacementTextureColor[1] * 0.59 +
+	add		$tmp26 $tmp23 $tmp25 	%line{100} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:102
+# 
+	compref		$tmp27 displacementTextureColor $const12 	%line{102} %argrw{"wrr"}
+	mul		$tmp28 $tmp27 $const13 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:101
+#                       displacementTextureColor[2] * 0.11;
+	add		mapHeight $tmp26 $tmp28 	%line{101} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:105
+# 
+	mul		Pscaled P grainScale 	%line{105} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:108
+#     float grain2 = noise("perlin", Pscaled * 2.1 + point(13.7, 0, 0));
+	compref		$tmp30 Pscaled $const8 	%line{108} %argrw{"wrr"}
+	mul		$tmp31 plankRandom $const14 	%argrw{"wrr"}
+	add		$tmp32 $tmp30 $tmp31 	%argrw{"wrr"}
+	compref		$tmp33 Pscaled $const10 	%argrw{"wrr"}
+	compref		$tmp34 Pscaled $const12 	%argrw{"wrr"}
+	point		$tmp29 $tmp32 $tmp33 $tmp34 	%argrw{"wrrr"}
+	noise		grain1 $const5 $tmp29 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:109
+#     float grain3 = noise("perlin", Pscaled * 4.3 + point(27.4, 0, 0));
+	mul		$tmp35 Pscaled $const15 	%line{109} %argrw{"wrr"}
+	add		$tmp37 $tmp35 $const16 	%argrw{"wrr"}
+	noise		grain2 $const5 $tmp37 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:110
+# 
+	mul		$tmp38 Pscaled $const17 	%line{110} %argrw{"wrr"}
+	add		$tmp40 $tmp38 $const18 	%argrw{"wrr"}
+	noise		grain3 $const5 $tmp40 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:112
+# 
+	mul		$tmp41 grain1 $const19 	%line{112} %argrw{"wrr"}
+	mul		$tmp42 grain2 $const20 	%argrw{"wrr"}
+	add		$tmp43 $tmp41 $tmp42 	%argrw{"wrr"}
+	mul		$tmp44 grain3 $const21 	%argrw{"wrr"}
+	add		grainPattern $tmp43 $tmp44 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:115
+#     grainPattern = pow(abs(grainPattern + distortion), 1.0 / grainContrast);
+	mul		$tmp46 Pscaled $const23 	%line{115} %argrw{"wrr"}
+	noise		$tmp45 $const22 $tmp46 	%argrw{"wrr"}
+	mul		distortion $tmp45 grainDistortion 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:116
+# 
+	add		$tmp48 grainPattern distortion 	%line{116} %argrw{"wrr"}
+	abs		$tmp47 $tmp48 	%argrw{"wr"}
+	div		$tmp49 $const7 grainContrast 	%argrw{"wrr"}
+	pow		grainPattern $tmp47 $tmp49 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:119
+#     float fineNoise = noise("perlin", PFine) * 0.6 +
+	mul		PFine P fineNoiseScale 	%line{119} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:120
+#                       noise("perlin", PFine * 2.3 + 17.5) * 0.4;
+	noise		$tmp50 $const5 PFine 	%line{120} %argrw{"wrr"}
+	mul		$tmp51 $tmp50 $const19 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:121
+# 
+	mul		$tmp53 PFine $const24 	%line{121} %argrw{"wrr"}
+	add		$tmp54 $tmp53 $const25 	%argrw{"wrr"}
+	noise		$tmp52 $const5 $tmp54 	%argrw{"wrr"}
+	mul		$tmp55 $tmp52 $const26 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:120
+#                       noise("perlin", PFine * 2.3 + 17.5) * 0.4;
+	add		fineNoise $tmp51 $tmp55 	%line{120} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:124
+#     float scratch1 = noise("perlin", point(PScratch[0], PScratch[1] * 0.02, PScratch[2]));
+	mul		PScratch P scratchScale 	%line{124} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:125
+#     float scratch2 = noise("perlin", point(PScratch[0] * 2.7 + 41.3, PScratch[1] * 0.03, PScratch[2] * 2.7));
+	compref		$tmp57 PScratch $const8 	%line{125} %argrw{"wrr"}
+	compref		$tmp58 PScratch $const10 	%argrw{"wrr"}
+	mul		$tmp59 $tmp58 $const27 	%argrw{"wrr"}
+	compref		$tmp60 PScratch $const12 	%argrw{"wrr"}
+	point		$tmp56 $tmp57 $tmp59 $tmp60 	%argrw{"wrrr"}
+	noise		scratch1 $const5 $tmp56 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:126
+#     float scratchPattern = max(0.0, (scratch1 * 0.7 + scratch2 * 0.3 - scratchThreshold) / (1.0 - scratchThreshold));
+	compref		$tmp62 PScratch $const8 	%line{126} %argrw{"wrr"}
+	mul		$tmp63 $tmp62 $const28 	%argrw{"wrr"}
+	add		$tmp64 $tmp63 $const29 	%argrw{"wrr"}
+	compref		$tmp65 PScratch $const10 	%argrw{"wrr"}
+	mul		$tmp66 $tmp65 $const30 	%argrw{"wrr"}
+	compref		$tmp67 PScratch $const12 	%argrw{"wrr"}
+	mul		$tmp68 $tmp67 $const28 	%argrw{"wrr"}
+	point		$tmp61 $tmp64 $tmp66 $tmp68 	%argrw{"wrrr"}
+	noise		scratch2 $const5 $tmp61 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:127
+#     scratchPattern *= scratchStrength;
+	mul		$tmp69 scratch1 $const23 	%line{127} %argrw{"wrr"}
+	mul		$tmp70 scratch2 $const9 	%argrw{"wrr"}
+	add		$tmp71 $tmp69 $tmp70 	%argrw{"wrr"}
+	sub		$tmp72 $tmp71 scratchThreshold 	%argrw{"wrr"}
+	sub		$tmp73 $const7 scratchThreshold 	%argrw{"wrr"}
+	div		$tmp74 $tmp72 $tmp73 	%argrw{"wrr"}
+	max		scratchPattern $const1 $tmp74 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:128
+# 
+	mul		scratchPattern scratchPattern scratchStrength 	%line{128} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:131
+#     float poreNoise = noise("cell", PPore);
+	mul		PPore P poreScale 	%line{131} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:132
+#     float porePattern = max(0.0, (poreNoise - poreThreshold) / (1.0 - poreThreshold));
+	noise		poreNoise $const22 PPore 	%line{132} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:133
+#     porePattern *= poreStrength;
+	sub		$tmp75 poreNoise poreThreshold 	%line{133} %argrw{"wrr"}
+	sub		$tmp76 $const7 poreThreshold 	%argrw{"wrr"}
+	div		$tmp77 $tmp75 $tmp76 	%argrw{"wrr"}
+	max		porePattern $const1 $tmp77 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:134
+# 
+	mul		porePattern porePattern poreStrength 	%line{134} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:138
+#     combinedGrain += fineNoise * fineNoiseStrength;
+	mix		combinedGrain textureLuminance grainPattern $const31 	%line{138} %argrw{"wrrr"}
+# shaders\\realistic_wood_table.osl:139
+#     combinedGrain += plankColorShift;
+	mul		$tmp78 fineNoise fineNoiseStrength 	%line{139} %argrw{"wrr"}
+	add		combinedGrain combinedGrain $tmp78 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:140
+#     combinedGrain = clamp(combinedGrain, 0.0, 1.0);
+	add		combinedGrain combinedGrain plankColorShift 	%line{140} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:141
+# 
+	functioncall	$const32 123 	%line{141} %argrw{"r"}
+# C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h:141
+# float  clamp (float x, float minval, float maxval) { return max(min(x,maxval),minval); }
+	min		$tmp79 combinedGrain $const7 	%filename{"C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h"} %argrw{"wrr"}
+	max		combinedGrain $tmp79 $const1 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:145
+# 
+	mix		woodColor darkWoodTint lightWoodTint combinedGrain 	%filename{"shaders\\realistic_wood_table.osl"} %line{145} %argrw{"wrrr"}
+# shaders\\realistic_wood_table.osl:148
+# 
+	mul		$tmp80 baseTexture $const26 	%line{148} %argrw{"wrr"}
+	add		$tmp82 $tmp80 $const33 	%argrw{"wrr"}
+	mul		woodColor woodColor $tmp82 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:151
+# 
+	mul		$tmp83 seamFactor seamDepth 	%line{151} %argrw{"wrr"}
+	sub		$tmp84 $const7 $tmp83 	%argrw{"wrr"}
+	mul		woodColor woodColor $tmp84 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:154
+#     woodColor = woodColor * (1.0 - porePattern * 0.25);
+	mul		$tmp85 scratchPattern $const21 	%line{154} %argrw{"wrr"}
+	sub		$tmp86 $const7 $tmp85 	%argrw{"wrr"}
+	mul		woodColor woodColor $tmp86 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:155
+# 
+	mul		$tmp87 porePattern $const20 	%line{155} %argrw{"wrr"}
+	sub		$tmp88 $const7 $tmp87 	%argrw{"wrr"}
+	mul		woodColor woodColor $tmp88 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:157
+# 
+	assign		diffuseColor woodColor 	%line{157} %argrw{"wr"}
+# shaders\\realistic_wood_table.osl:161
+# 
+	mul		$tmp90 woodColor $const35 	%line{161} %argrw{"wrr"}
+	mix		specularColor $const34 $tmp90 $const21 	%argrw{"wrrr"}
+# shaders\\realistic_wood_table.osl:165
+#     roughness = baseRoughness + grainRoughness;
+	sub		$tmp91 $const7 combinedGrain 	%line{165} %argrw{"wrr"}
+	mul		grainRoughness $tmp91 grainRoughnessVariation 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:166
+# 
+	add		roughness baseRoughness grainRoughness 	%line{166} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:169
+# 
+	mul		$tmp92 scratchPattern scratchRoughnessBoost 	%line{169} %argrw{"wrr"}
+	add		roughness roughness $tmp92 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:172
+# 
+	mul		$tmp93 seamFactor $const21 	%line{172} %argrw{"wrr"}
+	add		roughness roughness $tmp93 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:174
+# 
+	functioncall	$const32 149 	%line{174} %argrw{"r"}
+# C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h:141
+# float  clamp (float x, float minval, float maxval) { return max(min(x,maxval),minval); }
+	min		$tmp94 roughness $const37 	%filename{"C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h"} %line{141} %argrw{"wrr"}
+	max		roughness $tmp94 $const36 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:178
+#                         scratchPattern * 0.3 -
+	mul		$tmp95 combinedGrain $const4 	%filename{"shaders\\realistic_wood_table.osl"} %line{178} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:179
+#                         porePattern * 0.5 -
+	mul		$tmp96 scratchPattern $const9 	%line{179} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:178
+#                         scratchPattern * 0.3 -
+	sub		$tmp97 $tmp95 $tmp96 	%line{178} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:180
+#                         seamFactor * seamDepth;
+	mul		$tmp98 porePattern $const4 	%line{180} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:179
+#                         porePattern * 0.5 -
+	sub		$tmp99 $tmp97 $tmp98 	%line{179} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:181
+# 
+	mul		$tmp100 seamFactor seamDepth 	%line{181} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:180
+#                         seamFactor * seamDepth;
+	sub		proceduralHeight $tmp99 $tmp100 	%line{180} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:183
+# 
+	sub		$tmp101 mapHeight $const4 	%line{183} %argrw{"wrr"}
+	mul		$tmp102 $tmp101 displacementMapStrength 	%argrw{"wrr"}
+	add		heightField proceduralHeight $tmp102 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:185
+# 
+	mul		displacement heightField displacementScale 	%line{185} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:188
+#     float dhdu = (noise("perlin", (P + vector(bumpOffset, 0, 0)) * grainScale) -
+	assign		bumpOffset $const38 	%line{188} %argrw{"wr"}
+# shaders\\realistic_wood_table.osl:189
+#                   noise("perlin", (P - vector(bumpOffset, 0, 0)) * grainScale)) / (2.0 * bumpOffset);
+	vector		$tmp104 bumpOffset $const1 $const1 	%line{189} %argrw{"wrrr"}
+	add		$tmp105 P $tmp104 	%argrw{"wrr"}
+	mul		$tmp106 $tmp105 grainScale 	%argrw{"wrr"}
+	noise		$tmp103 $const5 $tmp106 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:190
+#     float dhdv = (noise("perlin", (P + vector(0, bumpOffset, 0)) * grainScale) -
+	vector		$tmp108 bumpOffset $const1 $const1 	%line{190} %argrw{"wrrr"}
+	sub		$tmp109 P $tmp108 	%argrw{"wrr"}
+	mul		$tmp110 $tmp109 grainScale 	%argrw{"wrr"}
+	noise		$tmp107 $const5 $tmp110 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:189
+#                   noise("perlin", (P - vector(bumpOffset, 0, 0)) * grainScale)) / (2.0 * bumpOffset);
+	sub		$tmp111 $tmp103 $tmp107 	%line{189} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:190
+#     float dhdv = (noise("perlin", (P + vector(0, bumpOffset, 0)) * grainScale) -
+	mul		$tmp112 $const39 bumpOffset 	%line{190} %argrw{"wrr"}
+	div		dhdu $tmp111 $tmp112 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:191
+#                   noise("perlin", (P - vector(0, bumpOffset, 0)) * grainScale)) / (2.0 * bumpOffset);
+	vector		$tmp114 $const1 bumpOffset $const1 	%line{191} %argrw{"wrrr"}
+	add		$tmp115 P $tmp114 	%argrw{"wrr"}
+	mul		$tmp116 $tmp115 grainScale 	%argrw{"wrr"}
+	noise		$tmp113 $const5 $tmp116 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:192
+# 
+	vector		$tmp118 $const1 bumpOffset $const1 	%line{192} %argrw{"wrrr"}
+	sub		$tmp119 P $tmp118 	%argrw{"wrr"}
+	mul		$tmp120 $tmp119 grainScale 	%argrw{"wrr"}
+	noise		$tmp117 $const5 $tmp120 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:191
+#                   noise("perlin", (P - vector(0, bumpOffset, 0)) * grainScale)) / (2.0 * bumpOffset);
+	sub		$tmp121 $tmp113 $tmp117 	%line{191} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:192
+# 
+	mul		$tmp122 $const39 bumpOffset 	%line{192} %argrw{"wrr"}
+	div		dhdv $tmp121 $tmp122 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:194
+#     vector tangentV = Dy(P);
+	Dx		tangentU P 	%line{194} %argrw{"wr"} %argderivs{1}
+# shaders\\realistic_wood_table.osl:195
+# 
+	Dy		tangentV P 	%line{195} %argrw{"wr"} %argderivs{1}
+# shaders\\realistic_wood_table.osl:197
+#                                       dhdv * normalize(cross(tangentU, N)) * bumpScale);
+	cross		$tmp124 N tangentV 	%line{197} %argrw{"wrr"}
+	normalize	$tmp123 $tmp124 	%argrw{"wr"}
+	mul		$tmp125 dhdu $tmp123 	%argrw{"wrr"}
+	mul		$tmp126 $tmp125 bumpScale 	%argrw{"wrr"}
+	sub		$tmp127 N $tmp126 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:198
+# 
+	cross		$tmp129 tangentU N 	%line{198} %argrw{"wrr"}
+	normalize	$tmp128 $tmp129 	%argrw{"wr"}
+	mul		$tmp130 dhdv $tmp128 	%argrw{"wrr"}
+	mul		$tmp131 $tmp130 bumpScale 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:197
+#                                       dhdv * normalize(cross(tangentU, N)) * bumpScale);
+	sub		$tmp132 $tmp127 $tmp131 	%line{197} %argrw{"wrr"}
+	normalize	Nperturbed $tmp132 	%argrw{"wr"}
+# shaders\\realistic_wood_table.osl:201
+#         (normalTextureColor[1] * 2.0 - 1.0) * normalFlipY,
+	compref		$tmp133 normalTextureColor $const8 	%line{201} %argrw{"wrr"}
+	mul		$tmp134 $tmp133 $const39 	%argrw{"wrr"}
+	sub		$tmp135 $tmp134 $const7 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:202
+#         normalTextureColor[2] * 2.0 - 1.0
+	compref		$tmp136 normalTextureColor $const10 	%line{202} %argrw{"wrr"}
+	mul		$tmp137 $tmp136 $const39 	%argrw{"wrr"}
+	sub		$tmp138 $tmp137 $const7 	%argrw{"wrr"}
+	mul		$tmp139 $tmp138 normalFlipY 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:203
+#     );
+	compref		$tmp140 normalTextureColor $const12 	%line{203} %argrw{"wrr"}
+	mul		$tmp141 $tmp140 $const39 	%argrw{"wrr"}
+	sub		$tmp142 $tmp141 $const7 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:200
+#         normalTextureColor[0] * 2.0 - 1.0,
+	vector		tangentNormal $tmp135 $tmp139 $tmp142 	%line{200} %argrw{"wrrr"}
+# shaders\\realistic_wood_table.osl:206
+#     vector Tv = normalize(dPdv);
+	normalize	Tu dPdu 	%line{206} %argrw{"wr"}
+# shaders\\realistic_wood_table.osl:207
+#     normal mapNormal = normal(normalize(tangentNormal[0] * Tu +
+	normalize	Tv dPdv 	%line{207} %argrw{"wr"}
+# shaders\\realistic_wood_table.osl:208
+#                                         tangentNormal[1] * Tv +
+	compref		$tmp144 tangentNormal $const8 	%line{208} %argrw{"wrr"}
+	mul		$tmp145 $tmp144 Tu 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:209
+#                                         tangentNormal[2] * normalize(vector(N))));
+	compref		$tmp146 tangentNormal $const10 	%line{209} %argrw{"wrr"}
+	mul		$tmp147 $tmp146 Tv 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:208
+#                                         tangentNormal[1] * Tv +
+	add		$tmp148 $tmp145 $tmp147 	%line{208} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:210
+# 
+	compref		$tmp149 tangentNormal $const12 	%line{210} %argrw{"wrr"}
+	assign		$tmp151 N 	%argrw{"wr"}
+	normalize	$tmp150 $tmp151 	%argrw{"wr"}
+	mul		$tmp152 $tmp149 $tmp150 	%argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:209
+#                                         tangentNormal[2] * normalize(vector(N))));
+	add		$tmp153 $tmp148 $tmp152 	%line{209} %argrw{"wrr"}
+# shaders\\realistic_wood_table.osl:208
+#                                         tangentNormal[1] * Tv +
+	normalize	$tmp143 $tmp153 	%line{208} %argrw{"wr"}
+	assign		mapNormal $tmp143 	%argrw{"wr"}
+# shaders\\realistic_wood_table.osl:212
+# }
+	assign		$tmp156 Nperturbed 	%line{212} %argrw{"wr"}
+	assign		$tmp157 mapNormal 	%argrw{"wr"}
+	mix		$tmp155 $tmp156 $tmp157 normalMapStrength 	%argrw{"wrrr"}
+	normalize	$tmp154 $tmp155 	%argrw{"wr"}
+	assign		outNormal $tmp154 	%argrw{"wr"}
+	end

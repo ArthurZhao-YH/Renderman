@@ -1,0 +1,64 @@
+shader ice_crystal(
+    float scale = 2.4,
+    float cloudScale = 3.2,
+    float crackScale = 9.0,
+    float scratchScale = 42.0,
+    float bumpStrength = 0.018,
+    color clearIceColor = color(0.68, 0.88, 0.98),
+    color frostColor = color(0.92, 0.98, 1.0),
+    color crackColor = color(0.96, 0.99, 1.0),
+    output color iceColor = color(0.68, 0.88, 0.98),
+    output color frostDiffuse = color(0.92, 0.98, 1.0),
+    output float frostGain = 0.01,
+    output float roughness = 0.03,
+    output normal iceNormal = N
+)
+{
+    normal Nn = normalize(N);
+    vector V = normalize(-I);
+
+    point q = transform("object", P) * scale;
+
+    /* Interior cloudy ice: large, soft 3D noise. */
+    point cloudP = q * cloudScale + point(4.7, 1.3, 8.9);
+    float cloudA = 0.5 + 0.5 * noise("perlin", cloudP);
+    float cloudB = 0.5 + 0.5 * noise("perlin", cloudP * 2.17 + point(1.1, 5.3, 2.4));
+    float cloudC = 0.5 + 0.5 * noise("perlin", cloudP * 4.10 + point(7.0, 0.3, 6.2));
+    float cloudyCore = smoothstep(0.47, 0.90, cloudA * 0.50 + cloudB * 0.34 + cloudC * 0.16);
+
+    /* Thin crack network: several stretched noises make long white fracture lines. */
+    point cq = q * crackScale;
+    float crackX = 1.0 - smoothstep(0.018, 0.095, abs(noise("perlin", point(cq[0] * 0.38, cq[1] * 1.70, cq[2] * 0.72))));
+    float crackY = 1.0 - smoothstep(0.018, 0.090, abs(noise("perlin", point(cq[0] * 1.25, cq[1] * 0.32, cq[2] * 1.85))));
+    float crackZ = 1.0 - smoothstep(0.015, 0.078, abs(noise("perlin", point(cq[0] * 1.80, cq[1] * 1.15, cq[2] * 0.28))));
+    float cracks = clamp(crackX * 0.55 + crackY * 0.45 + crackZ * 0.30, 0.0, 1.0);
+
+    /* Surface scratches: very fine but low influence so the ice stays transparent. */
+    point sq = q * scratchScale;
+    float scratchA = 1.0 - smoothstep(0.012, 0.055, abs(noise("perlin", point(sq[0] * 1.00, sq[1] * 0.10, sq[2] * 0.22))));
+    float scratchB = 1.0 - smoothstep(0.012, 0.060, abs(noise("perlin", point(sq[0] * 0.18, sq[1] * 1.00, sq[2] * 0.35))));
+    float scratches = clamp((scratchA + scratchB) * 0.35, 0.0, 1.0);
+
+    /* Frost appears stronger at grazing angles, helping the cube edges read as icy. */
+    float facingEdge = 1.0 - abs(dot(vector(Nn), V));
+    float edgeFrost = smoothstep(0.18, 0.82, facingEdge);
+
+    float frostMask = clamp(cloudyCore * 0.45 + cracks * 0.55 + scratches * 0.22 + edgeFrost * 0.28, 0.0, 1.0);
+    float crackMask = clamp(cracks * 0.85 + scratches * 0.35, 0.0, 1.0);
+
+    /* Transmission colour: mostly clear blue, slightly milkier where cracks/frost exist. */
+    color milkyIce = mix(clearIceColor, frostColor, clamp(cloudyCore * 0.35 + edgeFrost * 0.25, 0.0, 1.0));
+    iceColor = mix(milkyIce, crackColor, crackMask * 0.32);
+
+    /* Diffuse frost layer: this is not the main material, just subtle white deposits. */
+    frostDiffuse = mix(frostColor, crackColor, clamp(crackMask * 0.70 + edgeFrost * 0.20, 0.0, 1.0));
+    frostGain = clamp(0.004 + cloudyCore * 0.040 + cracks * 0.100 + scratches * 0.035 + edgeFrost * 0.065, 0.004, 0.22);
+
+    /* Keep roughness low enough for glass-like ice, but higher on frosted/cracked areas. */
+    roughness = clamp(0.012 + cloudyCore * 0.040 + cracks * 0.125 + scratches * 0.070 + edgeFrost * 0.050, 0.012, 0.24);
+
+    /* Micro unevenness. No extra texture required. */
+    float iceHeight = bumpStrength * (cloudyCore * 0.35 + cracks * 0.80 + scratches * 0.45 + edgeFrost * 0.25);
+    point bumpedP = P + vector(Nn) * iceHeight;
+    iceNormal = calculatenormal(bumpedP);
+}

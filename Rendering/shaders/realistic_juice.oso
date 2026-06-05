@@ -1,0 +1,469 @@
+OpenShadingLanguage 1.00
+# Compiled by oslc 1.13.0.@PROJECT_VERSION_TWEAK@"dev"
+# options: 
+shader realistic_juice
+param	color	juiceBaseColor	1 0.550000012 0.300000012		%read{90,90} %write{2147483647,-1}
+param	color	juiceDarkColor	0.949999988 0.449999988 0.200000003		%read{90,90} %write{2147483647,-1}
+param	float	colorIntensity	0.850000024		%read{97,97} %write{2147483647,-1}
+param	float	pulpScale	8.5		%read{23,23} %write{2147483647,-1}
+param	float	pulpDensity	0.349999994		%read{38,38} %write{2147483647,-1}
+param	float	pulpSize	0.119999997		%read{2147483647,-1} %write{2147483647,-1}
+param	float	pulpThreshold	0.649999976		%read{36,37} %write{2147483647,-1}
+param	color	pulpColor	1 0.649999976 0.400000006		%read{92,105} %write{2147483647,-1}
+param	float	suspensionScale	25		%read{39,39} %write{2147483647,-1}
+param	float	suspensionDensity	0.150000006		%read{53,53} %write{2147483647,-1}
+param	float	suspensionThreshold	0.819999993		%read{51,52} %write{2147483647,-1}
+param	float	turbidity	0.280000001		%read{74,74} %write{2147483647,-1}
+param	float	absorptionDepth	2.5		%read{99,99} %write{2147483647,-1}
+param	color	absorptionColor	1 0.5 0.25		%read{102,102} %write{2147483647,-1}
+param	float	ior	1.34000003		%read{2147483647,-1} %write{2147483647,-1}
+param	float	refractionStrength	1		%read{2147483647,-1} %write{2147483647,-1}
+param	float	transmissionGain	0.879999995		%read{117,117} %write{2147483647,-1}
+param	float	specularRoughness	0.0199999996		%read{107,107} %write{2147483647,-1}
+param	float	specularGain	0.949999988		%read{2147483647,-1} %write{2147483647,-1}
+param	color	specularTint	1 0.949999988 0.899999976		%read{2147483647,-1} %write{2147483647,-1}
+param	float	sssGain	0.419999987		%read{125,125} %write{2147483647,-1}
+param	color	sssColor	1 0.600000024 0.349999994		%read{105,105} %write{2147483647,-1}
+param	float	sssDmfp	1.20000005		%read{2147483647,-1} %write{2147483647,-1}
+param	float	bubbleScale	45		%read{54,54} %write{2147483647,-1}
+param	float	bubbleDensity	0.0799999982		%read{58,58} %write{2147483647,-1}
+param	float	bubbleThreshold	0.920000017		%read{56,57} %write{2147483647,-1}
+param	float	flowScale	3.5		%read{3,3} %write{2147483647,-1}
+param	float	flowSpeed	0.5		%read{4,15} %write{2147483647,-1}
+param	float	flowStrength	0.150000006		%read{21,21} %write{2147483647,-1}
+oparam	color	outColor	0 0 0		%read{2147483647,-1} %write{129,129}
+oparam	color	diffuseColor	0 0 0		%read{2147483647,-1} %write{132,132}
+oparam	color	transmissionColor	0 0 0		%read{2147483647,-1} %write{133,133}
+oparam	color	subsurfaceColor	0 0 0		%read{2147483647,-1} %write{134,134}
+oparam	float	roughness	0.0199999996		%read{2147483647,-1} %write{135,135}
+oparam	float	transmission	0.879999995		%read{2147483647,-1} %write{136,136}
+oparam	float	sss	0.419999987		%read{2147483647,-1} %write{137,137}
+global	point	P	%read{1,1} %write{2147483647,-1}
+global	vector	I	%read{75,75} %write{2147483647,-1}
+global	normal	N	%read{81,82} %write{2147483647,-1}
+global	normal	Ng	%read{78,78} %write{2147483647,-1}
+local	point	Pworld	%read{3,22} %write{1,1}
+local	float	animTime	%read{4,15} %write{2,2}
+local	point	Pflow	%read{5,14} %write{3,3}
+local	vector	flowOffset	%read{22,22} %write{21,21}
+local	point	Pdisturbed	%read{23,59} %write{22,22}
+local	point	Ppulp	%read{24,28} %write{23,23}
+local	float	pulpNoise	%read{25,25} %write{24,24}
+local	float	pulpWorley	%read{31,31} %write{25,25}
+local	float	pulp1	%read{32,32} %write{27,27}
+local	float	pulp2	%read{34,34} %write{30,30}
+local	float	pulpPattern	%read{37,37} %write{35,35}
+local	float	pulpMask	%read{38,130} %write{37,38}
+local	point	Psusp	%read{40,44} %write{39,39}
+local	float	suspNoise1	%read{46,46} %write{40,40}
+local	float	suspNoise2	%read{47,47} %write{43,43}
+local	float	suspNoise3	%read{49,49} %write{45,45}
+local	float	suspPattern	%read{52,52} %write{50,50}
+local	float	suspMask	%read{53,123} %write{52,53}
+local	point	Pbubble	%read{55,55} %write{54,54}
+local	float	bubbleNoise	%read{57,57} %write{55,55}
+local	float	bubbleMask	%read{58,108} %write{57,58}
+local	point	Pturb	%read{60,67} %write{59,59}
+local	float	turbNoise	%read{72,72} %write{71,71}
+local	float	turbidityVar	%read{90,131} %write{74,74}
+local	vector	Iview	%read{78,85} %write{75,75}
+local	vector	Nf	%read{86,86} %write{84,84}
+local	float	NdotV	%read{88,88} %write{87,87}
+local	float	depthFactor	%read{98,98} %write{89,89}
+local	color	baseColor	%read{92,92} %write{90,90}
+local	color	finalColor	%read{93,132} %write{92,97}
+local	color	absorptionFilter	%read{103,103} %write{102,102}
+local	color	transmitColor	%read{133,133} %write{103,103}
+local	color	sssColorFinal	%read{134,134} %write{105,105}
+local	float	surfaceRoughness	%read{111,135} %write{109,112}
+local	float	transmitStrength	%read{119,136} %write{117,120}
+local	float	sssStrength	%read{127,137} %write{125,128}
+const	string	$const1	"world"		%read{1,1} %write{2147483647,-1}
+const	string	$const2	"transform"		%read{0,0} %write{2147483647,-1}
+const	string	$const3	"common"		%read{1,1} %write{2147483647,-1}
+const	float	$const4	0		%read{2,128} %write{2147483647,-1}
+temp	vector	$tmp1	%read{21,21} %write{20,20}
+temp	float	$tmp2	%read{7,7} %write{6,6}
+const	string	$const5	"perlin"		%read{6,69} %write{2147483647,-1}
+temp	float	$tmp3	%read{5,5} %write{4,4}
+temp	point	$tmp4	%read{6,6} %write{5,5}
+const	float	$const6	0.5		%read{7,130} %write{2147483647,-1}
+temp	float	$tmp5	%read{20,20} %write{7,7}
+temp	float	$tmp6	%read{13,13} %write{12,12}
+const	float	$const7	1.29999995		%read{8,95} %write{2147483647,-1}
+temp	point	$tmp7	%read{10,10} %write{8,8}
+temp	float	$tmp8	%read{10,10} %write{9,9}
+temp	point	$tmp9	%read{11,11} %write{10,10}
+const	float	$const8	17.5		%read{11,11} %write{2147483647,-1}
+temp	point	$tmp10	%read{12,12} %write{11,11}
+temp	float	$tmp11	%read{20,20} %write{13,13}
+temp	float	$tmp12	%read{19,19} %write{18,18}
+const	float	$const9	1.70000005		%read{14,14} %write{2147483647,-1}
+temp	point	$tmp13	%read{16,16} %write{14,14}
+temp	float	$tmp14	%read{16,16} %write{15,15}
+temp	point	$tmp15	%read{17,17} %write{16,16}
+const	float	$const10	39.2000008		%read{17,17} %write{2147483647,-1}
+temp	point	$tmp16	%read{18,18} %write{17,17}
+temp	float	$tmp17	%read{20,20} %write{19,19}
+const	string	$const11	"cell"		%read{24,55} %write{2147483647,-1}
+const	float	$const12	1		%read{25,127} %write{2147483647,-1}
+const	float	$const13	1.5		%read{26,26} %write{2147483647,-1}
+temp	point	$tmp18	%read{27,27} %write{26,26}
+const	float	$const14	2.70000005		%read{28,28} %write{2147483647,-1}
+temp	point	$tmp19	%read{29,29} %write{28,28}
+const	float	$const15	13.3999996		%read{29,29} %write{2147483647,-1}
+temp	point	$tmp20	%read{30,30} %write{29,29}
+const	float	$const16	0.600000024		%read{31,72} %write{2147483647,-1}
+temp	float	$tmp21	%read{33,33} %write{31,31}
+const	float	$const17	0.25		%read{32,32} %write{2147483647,-1}
+temp	float	$tmp22	%read{33,33} %write{32,32}
+temp	float	$tmp23	%read{35,35} %write{33,33}
+const	float	$const18	0.150000006		%read{34,111} %write{2147483647,-1}
+temp	float	$tmp24	%read{35,35} %write{34,34}
+const	float	$const19	0.0500000007		%read{36,106} %write{2147483647,-1}
+temp	float	$tmp25	%read{37,37} %write{36,36}
+const	float	$const20	2.0999999		%read{41,41} %write{2147483647,-1}
+temp	point	$tmp26	%read{42,42} %write{41,41}
+const	float	$const21	27.2999992		%read{42,42} %write{2147483647,-1}
+temp	point	$tmp27	%read{43,43} %write{42,42}
+const	float	$const22	0.800000012		%read{44,121} %write{2147483647,-1}
+temp	point	$tmp28	%read{45,45} %write{44,44}
+temp	float	$tmp29	%read{48,48} %write{46,46}
+const	float	$const23	0.300000012		%read{47,123} %write{2147483647,-1}
+temp	float	$tmp30	%read{48,48} %write{47,47}
+temp	float	$tmp31	%read{50,50} %write{48,48}
+const	float	$const24	0.200000003		%read{49,115} %write{2147483647,-1}
+temp	float	$tmp32	%read{50,50} %write{49,49}
+const	float	$const25	0.0299999993		%read{51,108} %write{2147483647,-1}
+temp	float	$tmp33	%read{52,52} %write{51,51}
+const	float	$const26	0.0199999996		%read{56,56} %write{2147483647,-1}
+temp	float	$tmp34	%read{57,57} %write{56,56}
+const	float	$const27	4.5		%read{59,59} %write{2147483647,-1}
+temp	float	$tmp35	%read{61,61} %write{60,60}
+temp	float	$tmp36	%read{66,66} %write{61,61}
+temp	float	$tmp37	%read{65,65} %write{64,64}
+const	float	$const28	2.29999995		%read{62,62} %write{2147483647,-1}
+temp	point	$tmp38	%read{63,63} %write{62,62}
+const	float	$const29	11.6999998		%read{63,63} %write{2147483647,-1}
+temp	point	$tmp39	%read{64,64} %write{63,63}
+temp	float	$tmp40	%read{66,66} %write{65,65}
+temp	float	$tmp41	%read{71,71} %write{66,66}
+temp	float	$tmp42	%read{70,70} %write{69,69}
+const	float	$const30	4.0999999		%read{67,67} %write{2147483647,-1}
+temp	point	$tmp43	%read{68,68} %write{67,67}
+const	float	$const31	23.8999996		%read{68,68} %write{2147483647,-1}
+temp	point	$tmp44	%read{69,69} %write{68,68}
+temp	float	$tmp45	%read{71,71} %write{70,70}
+const	float	$const32	0.699999988		%read{73,91} %write{2147483647,-1}
+temp	float	$tmp46	%read{73,73} %write{72,72}
+temp	float	$tmp47	%read{74,74} %write{73,73}
+temp	vector	$tmp48	%read{84,84} %write{81,82}
+const	string	$const33	"faceforward"		%read{76,77} %write{2147483647,-1}
+temp	float	$tmp49	%read{79,79} %write{78,78}
+const	int	$const34	0		%read{79,79} %write{2147483647,-1}
+temp	int	$tmp50	%read{80,80} %write{79,79}
+temp	float	$tmp51	%read{87,87} %write{86,86}
+temp	vector	$tmp52	%read{86,86} %write{85,85}
+temp	float	$tmp53	%read{89,89} %write{88,88}
+temp	float	$tmp54	%read{92,92} %write{91,91}
+const	float	$const35	0.850000024		%read{93,93} %write{2147483647,-1}
+temp	color	$tmp55	%read{94,94} %write{93,93}
+temp	color	$tmp56	%read{96,96} %write{95,95}
+temp	float	$tmp57	%read{101,101} %write{100,100}
+temp	float	$tmp58	%read{99,99} %write{98,98}
+temp	float	$tmp59	%read{100,100} %write{99,99}
+const	float	$const36	0.100000001		%read{100,100} %write{2147483647,-1}
+temp	float	$tmp60	%read{102,102} %write{101,101}
+temp	float	$tmp61	%read{105,105} %write{104,104}
+temp	float	$tmp62	%read{107,107} %write{106,106}
+temp	float	$tmp63	%read{109,109} %write{107,107}
+temp	float	$tmp64	%read{109,109} %write{108,108}
+const	float	$const37	0.00999999978		%read{112,112} %write{2147483647,-1}
+const	string	$const38	"clamp"		%read{110,126} %write{2147483647,-1}
+temp	float	$tmp65	%read{112,112} %write{111,111}
+temp	float	$tmp66	%read{114,114} %write{113,113}
+temp	float	$tmp67	%read{116,116} %write{114,114}
+temp	float	$tmp68	%read{116,116} %write{115,115}
+temp	float	$tmp69	%read{117,117} %write{116,116}
+temp	float	$tmp70	%read{120,120} %write{119,119}
+temp	float	$tmp71	%read{122,122} %write{121,121}
+temp	float	$tmp72	%read{124,124} %write{122,122}
+temp	float	$tmp73	%read{124,124} %write{123,123}
+temp	float	$tmp74	%read{125,125} %write{124,124}
+temp	float	$tmp75	%read{128,128} %write{127,127}
+temp	float	$tmp76	%read{131,131} %write{130,130}
+temp	float	$tmp77	%read{132,132} %write{131,131}
+code ___main___
+# realistic_juice.osl:65
+#     point Pworld = transform("world", P);
+	functioncall	$const2 2 	%filename{"realistic_juice.osl"} %line{65} %argrw{"r"}
+# C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h:263
+# point  transform (string to, point p)  { return transform("common",to,p); }
+	transform	Pworld $const3 $const1 P 	%filename{"C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h"} %line{263} %argrw{"wrrr"}
+# realistic_juice.osl:68
+#     float animTime = 0.0;  // 可以连接动画时间
+	assign		animTime $const4 	%filename{"realistic_juice.osl"} %line{68} %argrw{"wr"}
+# realistic_juice.osl:69
+#     point Pflow = Pworld * flowScale;
+	mul		Pflow Pworld flowScale 	%line{69} %argrw{"wrr"}
+# realistic_juice.osl:71
+#         noise("perlin", Pflow + animTime * flowSpeed) - 0.5,
+	mul		$tmp3 animTime flowSpeed 	%line{71} %argrw{"wrr"}
+	add		$tmp4 Pflow $tmp3 	%argrw{"wrr"}
+	noise		$tmp2 $const5 $tmp4 	%argrw{"wrr"}
+	sub		$tmp5 $tmp2 $const6 	%argrw{"wrr"}
+# realistic_juice.osl:72
+#         noise("perlin", Pflow * 1.3 + animTime * flowSpeed + 17.5) - 0.5,
+	mul		$tmp7 Pflow $const7 	%line{72} %argrw{"wrr"}
+	mul		$tmp8 animTime flowSpeed 	%argrw{"wrr"}
+	add		$tmp9 $tmp7 $tmp8 	%argrw{"wrr"}
+	add		$tmp10 $tmp9 $const8 	%argrw{"wrr"}
+	noise		$tmp6 $const5 $tmp10 	%argrw{"wrr"}
+	sub		$tmp11 $tmp6 $const6 	%argrw{"wrr"}
+# realistic_juice.osl:73
+#         noise("perlin", Pflow * 1.7 + animTime * flowSpeed + 39.2) - 0.5
+	mul		$tmp13 Pflow $const9 	%line{73} %argrw{"wrr"}
+	mul		$tmp14 animTime flowSpeed 	%argrw{"wrr"}
+	add		$tmp15 $tmp13 $tmp14 	%argrw{"wrr"}
+	add		$tmp16 $tmp15 $const10 	%argrw{"wrr"}
+	noise		$tmp12 $const5 $tmp16 	%argrw{"wrr"}
+	sub		$tmp17 $tmp12 $const6 	%argrw{"wrr"}
+# realistic_juice.osl:70
+#     vector flowOffset = vector(
+	vector		$tmp1 $tmp5 $tmp11 $tmp17 	%line{70} %argrw{"wrrr"}
+# realistic_juice.osl:74
+#     ) * flowStrength;
+	mul		flowOffset $tmp1 flowStrength 	%line{74} %argrw{"wrr"}
+# realistic_juice.osl:76
+#     point Pdisturbed = Pworld + flowOffset;
+	add		Pdisturbed Pworld flowOffset 	%line{76} %argrw{"wrr"}
+# realistic_juice.osl:79
+#     point Ppulp = Pdisturbed * pulpScale;
+	mul		Ppulp Pdisturbed pulpScale 	%line{79} %argrw{"wrr"}
+# realistic_juice.osl:80
+#     float pulpNoise = noise("cell", Ppulp);
+	noise		pulpNoise $const11 Ppulp 	%line{80} %argrw{"wrr"}
+# realistic_juice.osl:81
+#     float pulpWorley = 1.0 - pulpNoise;  // Worley/cell noise 模拟颗粒
+	sub		pulpWorley $const12 pulpNoise 	%line{81} %argrw{"wrr"}
+# realistic_juice.osl:84
+#     float pulp1 = noise("perlin", Ppulp * 1.5);
+	mul		$tmp18 Ppulp $const13 	%line{84} %argrw{"wrr"}
+	noise		pulp1 $const5 $tmp18 	%argrw{"wrr"}
+# realistic_juice.osl:85
+#     float pulp2 = noise("perlin", Ppulp * 2.7 + 13.4);
+	mul		$tmp19 Ppulp $const14 	%line{85} %argrw{"wrr"}
+	add		$tmp20 $tmp19 $const15 	%argrw{"wrr"}
+	noise		pulp2 $const5 $tmp20 	%argrw{"wrr"}
+# realistic_juice.osl:86
+#     float pulpPattern = pulpWorley * 0.6 + pulp1 * 0.25 + pulp2 * 0.15;
+	mul		$tmp21 pulpWorley $const16 	%line{86} %argrw{"wrr"}
+	mul		$tmp22 pulp1 $const17 	%argrw{"wrr"}
+	add		$tmp23 $tmp21 $tmp22 	%argrw{"wrr"}
+	mul		$tmp24 pulp2 $const18 	%argrw{"wrr"}
+	add		pulpPattern $tmp23 $tmp24 	%argrw{"wrr"}
+# realistic_juice.osl:89
+#     float pulpMask = smoothstep(pulpThreshold, pulpThreshold + 0.05, pulpPattern);
+	add		$tmp25 pulpThreshold $const19 	%line{89} %argrw{"wrr"}
+	smoothstep	pulpMask pulpThreshold $tmp25 pulpPattern 	%argrw{"wrrr"}
+# realistic_juice.osl:90
+#     pulpMask *= pulpDensity;
+	mul		pulpMask pulpMask pulpDensity 	%line{90} %argrw{"wrr"}
+# realistic_juice.osl:93
+#     point Psusp = Pdisturbed * suspensionScale;
+	mul		Psusp Pdisturbed suspensionScale 	%line{93} %argrw{"wrr"}
+# realistic_juice.osl:94
+#     float suspNoise1 = noise("perlin", Psusp);
+	noise		suspNoise1 $const5 Psusp 	%line{94} %argrw{"wrr"}
+# realistic_juice.osl:95
+#     float suspNoise2 = noise("perlin", Psusp * 2.1 + 27.3);
+	mul		$tmp26 Psusp $const20 	%line{95} %argrw{"wrr"}
+	add		$tmp27 $tmp26 $const21 	%argrw{"wrr"}
+	noise		suspNoise2 $const5 $tmp27 	%argrw{"wrr"}
+# realistic_juice.osl:96
+#     float suspNoise3 = noise("cell", Psusp * 0.8);
+	mul		$tmp28 Psusp $const22 	%line{96} %argrw{"wrr"}
+	noise		suspNoise3 $const11 $tmp28 	%argrw{"wrr"}
+# realistic_juice.osl:97
+#     float suspPattern = suspNoise1 * 0.5 + suspNoise2 * 0.3 + suspNoise3 * 0.2;
+	mul		$tmp29 suspNoise1 $const6 	%line{97} %argrw{"wrr"}
+	mul		$tmp30 suspNoise2 $const23 	%argrw{"wrr"}
+	add		$tmp31 $tmp29 $tmp30 	%argrw{"wrr"}
+	mul		$tmp32 suspNoise3 $const24 	%argrw{"wrr"}
+	add		suspPattern $tmp31 $tmp32 	%argrw{"wrr"}
+# realistic_juice.osl:99
+#     float suspMask = smoothstep(suspensionThreshold, suspensionThreshold + 0.03, suspPattern);
+	add		$tmp33 suspensionThreshold $const25 	%line{99} %argrw{"wrr"}
+	smoothstep	suspMask suspensionThreshold $tmp33 suspPattern 	%argrw{"wrrr"}
+# realistic_juice.osl:100
+#     suspMask *= suspensionDensity;
+	mul		suspMask suspMask suspensionDensity 	%line{100} %argrw{"wrr"}
+# realistic_juice.osl:103
+#     point Pbubble = Pdisturbed * bubbleScale;
+	mul		Pbubble Pdisturbed bubbleScale 	%line{103} %argrw{"wrr"}
+# realistic_juice.osl:104
+#     float bubbleNoise = noise("cell", Pbubble);
+	noise		bubbleNoise $const11 Pbubble 	%line{104} %argrw{"wrr"}
+# realistic_juice.osl:105
+#     float bubbleMask = smoothstep(bubbleThreshold, bubbleThreshold + 0.02, bubbleNoise);
+	add		$tmp34 bubbleThreshold $const26 	%line{105} %argrw{"wrr"}
+	smoothstep	bubbleMask bubbleThreshold $tmp34 bubbleNoise 	%argrw{"wrrr"}
+# realistic_juice.osl:106
+#     bubbleMask *= bubbleDensity;
+	mul		bubbleMask bubbleMask bubbleDensity 	%line{106} %argrw{"wrr"}
+# realistic_juice.osl:110
+#     point Pturb = Pdisturbed * 4.5;
+	mul		Pturb Pdisturbed $const27 	%line{110} %argrw{"wrr"}
+# realistic_juice.osl:111
+#     float turbNoise = noise("perlin", Pturb) * 0.5 +
+	noise		$tmp35 $const5 Pturb 	%line{111} %argrw{"wrr"}
+	mul		$tmp36 $tmp35 $const6 	%argrw{"wrr"}
+# realistic_juice.osl:112
+#                       noise("perlin", Pturb * 2.3 + 11.7) * 0.3 +
+	mul		$tmp38 Pturb $const28 	%line{112} %argrw{"wrr"}
+	add		$tmp39 $tmp38 $const29 	%argrw{"wrr"}
+	noise		$tmp37 $const5 $tmp39 	%argrw{"wrr"}
+	mul		$tmp40 $tmp37 $const23 	%argrw{"wrr"}
+# realistic_juice.osl:111
+#     float turbNoise = noise("perlin", Pturb) * 0.5 +
+	add		$tmp41 $tmp36 $tmp40 	%line{111} %argrw{"wrr"}
+# realistic_juice.osl:113
+#                       noise("perlin", Pturb * 4.1 + 23.9) * 0.2;
+	mul		$tmp43 Pturb $const30 	%line{113} %argrw{"wrr"}
+	add		$tmp44 $tmp43 $const31 	%argrw{"wrr"}
+	noise		$tmp42 $const5 $tmp44 	%argrw{"wrr"}
+	mul		$tmp45 $tmp42 $const24 	%argrw{"wrr"}
+# realistic_juice.osl:112
+#                       noise("perlin", Pturb * 2.3 + 11.7) * 0.3 +
+	add		turbNoise $tmp41 $tmp45 	%line{112} %argrw{"wrr"}
+# realistic_juice.osl:114
+#     float turbidityVar = turbidity * (0.7 + turbNoise * 0.6);
+	mul		$tmp46 turbNoise $const16 	%line{114} %argrw{"wrr"}
+	add		$tmp47 $const32 $tmp46 	%argrw{"wrr"}
+	mul		turbidityVar turbidity $tmp47 	%argrw{"wrr"}
+# realistic_juice.osl:118
+#     vector Iview = normalize(I);
+	normalize	Iview I 	%line{118} %argrw{"wr"}
+# realistic_juice.osl:119
+#     vector Nf = normalize(faceforward(N, Iview));
+	functioncall	$const33 84 	%line{119} %argrw{"r"}
+# C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h:210
+#     return faceforward(N, I, Ng);
+	functioncall	$const33 84 	%filename{"C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h"} %line{210} %argrw{"r"}
+# C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h:206
+#     return (dot(I, Nref) > 0) ? -N : N;
+	dot		$tmp49 Iview Ng 	%line{206} %argrw{"wrr"}
+	gt		$tmp50 $tmp49 $const34 	%argrw{"wrr"}
+	if		$tmp50 82 83 	%argrw{"r"}
+	neg		$tmp48 N 	%argrw{"wr"}
+	assign		$tmp48 N 	%argrw{"wr"}
+	return
+# realistic_juice.osl:119
+#     vector Nf = normalize(faceforward(N, Iview));
+	normalize	Nf $tmp48 	%filename{"realistic_juice.osl"} %line{119} %argrw{"wr"}
+# realistic_juice.osl:120
+#     float NdotV = abs(dot(Nf, -Iview));
+	neg		$tmp52 Iview 	%line{120} %argrw{"wr"}
+	dot		$tmp51 Nf $tmp52 	%argrw{"wrr"}
+	abs		NdotV $tmp51 	%argrw{"wr"}
+# realistic_juice.osl:123
+#     float depthFactor = 1.0 - pow(NdotV, 0.5);
+	pow		$tmp53 NdotV $const6 	%line{123} %argrw{"wrr"}
+	sub		depthFactor $const12 $tmp53 	%argrw{"wrr"}
+# realistic_juice.osl:127
+#     color baseColor = mix(juiceBaseColor, juiceDarkColor, turbidityVar);
+	mix		baseColor juiceBaseColor juiceDarkColor turbidityVar 	%line{127} %argrw{"wrrr"}
+# realistic_juice.osl:130
+#     color finalColor = mix(baseColor, pulpColor, pulpMask * 0.7);
+	mul		$tmp54 pulpMask $const32 	%line{130} %argrw{"wrr"}
+	mix		finalColor baseColor pulpColor $tmp54 	%argrw{"wrrr"}
+# realistic_juice.osl:133
+#     finalColor = mix(finalColor, finalColor * 0.85, suspMask);
+	mul		$tmp55 finalColor $const35 	%line{133} %argrw{"wrr"}
+	mix		finalColor finalColor $tmp55 suspMask 	%argrw{"wrrr"}
+# realistic_juice.osl:136
+#     finalColor = mix(finalColor, finalColor * 1.3, bubbleMask);
+	mul		$tmp56 finalColor $const7 	%line{136} %argrw{"wrr"}
+	mix		finalColor finalColor $tmp56 bubbleMask 	%argrw{"wrrr"}
+# realistic_juice.osl:139
+#     finalColor = finalColor * colorIntensity;
+	mul		finalColor finalColor colorIntensity 	%line{139} %argrw{"wrr"}
+# realistic_juice.osl:143
+#     color absorptionFilter = pow(absorptionColor, 1.0 / max(absorptionDepth * (1.0 + depthFactor), 0.1));
+	add		$tmp58 $const12 depthFactor 	%line{143} %argrw{"wrr"}
+	mul		$tmp59 absorptionDepth $tmp58 	%argrw{"wrr"}
+	max		$tmp57 $tmp59 $const36 	%argrw{"wrr"}
+	div		$tmp60 $const12 $tmp57 	%argrw{"wrr"}
+	pow		absorptionFilter absorptionColor $tmp60 	%argrw{"wrr"}
+# realistic_juice.osl:144
+#     color transmitColor = finalColor * absorptionFilter;
+	mul		transmitColor finalColor absorptionFilter 	%line{144} %argrw{"wrr"}
+# realistic_juice.osl:147
+#     color sssColorFinal = mix(sssColor, pulpColor, pulpMask * 0.3);
+	mul		$tmp61 pulpMask $const23 	%line{147} %argrw{"wrr"}
+	mix		sssColorFinal sssColor pulpColor $tmp61 	%argrw{"wrrr"}
+# realistic_juice.osl:151
+#     float surfaceRoughness = specularRoughness + pulpMask * 0.05 + bubbleMask * 0.03;
+	mul		$tmp62 pulpMask $const19 	%line{151} %argrw{"wrr"}
+	add		$tmp63 specularRoughness $tmp62 	%argrw{"wrr"}
+	mul		$tmp64 bubbleMask $const25 	%argrw{"wrr"}
+	add		surfaceRoughness $tmp63 $tmp64 	%argrw{"wrr"}
+# realistic_juice.osl:152
+#     surfaceRoughness = clamp(surfaceRoughness, 0.01, 0.15);
+	functioncall	$const38 113 	%line{152} %argrw{"r"}
+# C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h:141
+# float  clamp (float x, float minval, float maxval) { return max(min(x,maxval),minval); }
+	min		$tmp65 surfaceRoughness $const18 	%filename{"C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h"} %line{141} %argrw{"wrr"}
+	max		surfaceRoughness $tmp65 $const37 	%argrw{"wrr"}
+# realistic_juice.osl:156
+#     float transmitStrength = transmissionGain * (1.0 - pulpMask * 0.3 - suspMask * 0.2);
+	mul		$tmp66 pulpMask $const23 	%filename{"realistic_juice.osl"} %line{156} %argrw{"wrr"}
+	sub		$tmp67 $const12 $tmp66 	%argrw{"wrr"}
+	mul		$tmp68 suspMask $const24 	%argrw{"wrr"}
+	sub		$tmp69 $tmp67 $tmp68 	%argrw{"wrr"}
+	mul		transmitStrength transmissionGain $tmp69 	%argrw{"wrr"}
+# realistic_juice.osl:157
+#     transmitStrength = clamp(transmitStrength, 0.3, 1.0);
+	functioncall	$const38 121 	%line{157} %argrw{"r"}
+# C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h:141
+# float  clamp (float x, float minval, float maxval) { return max(min(x,maxval),minval); }
+	min		$tmp70 transmitStrength $const12 	%filename{"C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h"} %line{141} %argrw{"wrr"}
+	max		transmitStrength $tmp70 $const23 	%argrw{"wrr"}
+# realistic_juice.osl:161
+#     float sssStrength = sssGain * (1.0 + pulpMask * 0.8 + suspMask * 0.3);
+	mul		$tmp71 pulpMask $const22 	%filename{"realistic_juice.osl"} %line{161} %argrw{"wrr"}
+	add		$tmp72 $const12 $tmp71 	%argrw{"wrr"}
+	mul		$tmp73 suspMask $const23 	%argrw{"wrr"}
+	add		$tmp74 $tmp72 $tmp73 	%argrw{"wrr"}
+	mul		sssStrength sssGain $tmp74 	%argrw{"wrr"}
+# realistic_juice.osl:162
+#     sssStrength = clamp(sssStrength, 0.0, 1.0);
+	functioncall	$const38 129 	%line{162} %argrw{"r"}
+# C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h:141
+# float  clamp (float x, float minval, float maxval) { return max(min(x,maxval),minval); }
+	min		$tmp75 sssStrength $const12 	%filename{"C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h"} %line{141} %argrw{"wrr"}
+	max		sssStrength $tmp75 $const4 	%argrw{"wrr"}
+# realistic_juice.osl:165
+#     outColor = finalColor;
+	assign		outColor finalColor 	%filename{"realistic_juice.osl"} %line{165} %argrw{"wr"}
+# realistic_juice.osl:166
+#     diffuseColor = finalColor * (turbidityVar + pulpMask * 0.5);
+	mul		$tmp76 pulpMask $const6 	%line{166} %argrw{"wrr"}
+	add		$tmp77 turbidityVar $tmp76 	%argrw{"wrr"}
+	mul		diffuseColor finalColor $tmp77 	%argrw{"wrr"}
+# realistic_juice.osl:167
+#     transmissionColor = transmitColor;
+	assign		transmissionColor transmitColor 	%line{167} %argrw{"wr"}
+# realistic_juice.osl:168
+#     subsurfaceColor = sssColorFinal;
+	assign		subsurfaceColor sssColorFinal 	%line{168} %argrw{"wr"}
+# realistic_juice.osl:169
+#     roughness = surfaceRoughness;
+	assign		roughness surfaceRoughness 	%line{169} %argrw{"wr"}
+# realistic_juice.osl:170
+#     transmission = transmitStrength;
+	assign		transmission transmitStrength 	%line{170} %argrw{"wr"}
+# realistic_juice.osl:171
+#     sss = sssStrength;
+	assign		sss sssStrength 	%line{171} %argrw{"wr"}
+	end

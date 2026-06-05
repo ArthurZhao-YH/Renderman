@@ -1,0 +1,173 @@
+// realistic_wood_table.osl
+
+#include "stdosl.h"
+
+shader realistic_wood_table(
+    string woodTexture = "wood.tex",
+    string normalTexture = "table_normal.tex",
+    string displacementTexture = "table_displacement.tex",
+    float textureRepeatU = 4.0,
+    float textureRepeatV = 1.5,
+    float textureRotation = 0.0,
+
+    float grainScale = 45.0,
+    float grainDetail = 3.5,
+    float grainDistortion = 0.35,
+    float grainContrast = 0.65,
+
+    float fineNoiseScale = 180.0,
+    float fineNoiseStrength = 0.15,
+
+    float plankWidth = 4.5,
+    float plankVariation = 0.25,
+    float seamWidth = 0.015,
+    float seamDepth = 0.08,
+
+    float scratchScale = 95.0,
+    float scratchStrength = 0.55,
+    float scratchThreshold = 0.82,
+
+    float poreScale = 420.0,
+    float poreStrength = 0.28,
+    float poreThreshold = 0.88,
+
+    float bumpScale = 0.045,
+    float displacementScale = 0.012,
+    float normalMapStrength = 0.78,
+    float displacementMapStrength = 0.62,
+    float normalFlipY = 1.0,
+
+    float baseRoughness = 0.68,
+    float grainRoughnessVariation = 0.25,
+    float scratchRoughnessBoost = 0.35,
+
+    color darkWoodTint = color(0.08, 0.04, 0.018),
+    color lightWoodTint = color(0.85, 0.58, 0.28),
+    float colorVariation = 0.18,
+
+    output color diffuseColor = 0,
+    output color specularColor = 0,
+    output float roughness = 0.5,
+    output normal outNormal = N,
+    output float displacement = 0
+)
+{
+    float uu = u * textureRepeatU;
+    float vv = v * textureRepeatV;
+
+    if (textureRotation != 0.0) {
+        float rad = radians(textureRotation);
+        float cosR = cos(rad);
+        float sinR = sin(rad);
+        float uuCentered = uu - 0.5;
+        float vvCentered = vv - 0.5;
+        uu = uuCentered * cosR - vvCentered * sinR + 0.5;
+        vv = uuCentered * sinR + vvCentered * cosR + 0.5;
+    }
+
+    float plankID = floor(vv * plankWidth);
+    float plankV = vv * plankWidth - plankID;
+
+    float plankRandom = noise("perlin", plankID * 7.32, 0.0);
+    float plankColorShift = (plankRandom - 0.5) * plankVariation;
+
+    float seamMask = smoothstep(0.0, seamWidth, plankV) *
+                     smoothstep(0.0, seamWidth, 1.0 - plankV);
+    float seamFactor = 1.0 - seamMask;
+
+    color baseTexture = texture(woodTexture, uu, vv);
+    color normalTextureColor = texture(normalTexture, uu, vv);
+    color displacementTextureColor = texture(displacementTexture, uu, vv);
+    float textureLuminance = (baseTexture[0] * 0.3 + baseTexture[1] * 0.59 + baseTexture[2] * 0.11);
+    float mapHeight = displacementTextureColor[0] * 0.3 +
+                      displacementTextureColor[1] * 0.59 +
+                      displacementTextureColor[2] * 0.11;
+
+    point Pscaled = P * grainScale;
+
+    float grain1 = noise("perlin", point(Pscaled[0] + plankRandom * 10.0, Pscaled[1], Pscaled[2]));
+    float grain2 = noise("perlin", Pscaled * 2.1 + point(13.7, 0, 0));
+    float grain3 = noise("perlin", Pscaled * 4.3 + point(27.4, 0, 0));
+
+    float grainPattern = grain1 * 0.6 + grain2 * 0.25 + grain3 * 0.15;
+
+    float distortion = noise("cell", Pscaled * 0.7) * grainDistortion;
+    grainPattern = pow(abs(grainPattern + distortion), 1.0 / grainContrast);
+
+    point PFine = P * fineNoiseScale;
+    float fineNoise = noise("perlin", PFine) * 0.6 +
+                      noise("perlin", PFine * 2.3 + 17.5) * 0.4;
+
+    point PScratch = P * scratchScale;
+    float scratch1 = noise("perlin", point(PScratch[0], PScratch[1] * 0.02, PScratch[2]));
+    float scratch2 = noise("perlin", point(PScratch[0] * 2.7 + 41.3, PScratch[1] * 0.03, PScratch[2] * 2.7));
+    float scratchPattern = max(0.0, (scratch1 * 0.7 + scratch2 * 0.3 - scratchThreshold) / (1.0 - scratchThreshold));
+    scratchPattern *= scratchStrength;
+
+    point PPore = P * poreScale;
+    float poreNoise = noise("cell", PPore);
+    float porePattern = max(0.0, (poreNoise - poreThreshold) / (1.0 - poreThreshold));
+    porePattern *= poreStrength;
+
+    float combinedGrain = mix(textureLuminance, grainPattern, 0.45);
+    combinedGrain += fineNoise * fineNoiseStrength;
+    combinedGrain += plankColorShift;
+    combinedGrain = clamp(combinedGrain, 0.0, 1.0);
+
+    color woodColor = mix(darkWoodTint, lightWoodTint, combinedGrain);
+
+    woodColor = woodColor * (baseTexture * 0.4 + color(0.6));
+
+    woodColor = woodColor * (1.0 - seamFactor * seamDepth);
+
+    woodColor = woodColor * (1.0 - scratchPattern * 0.15);
+    woodColor = woodColor * (1.0 - porePattern * 0.25);
+
+    diffuseColor = woodColor;
+
+    specularColor = mix(color(1.0), woodColor * 1.8, 0.15);
+
+    float grainRoughness = (1.0 - combinedGrain) * grainRoughnessVariation;
+    roughness = baseRoughness + grainRoughness;
+
+    roughness += scratchPattern * scratchRoughnessBoost;
+
+    roughness += seamFactor * 0.15;
+
+    roughness = clamp(roughness, 0.1, 0.95);
+
+    float proceduralHeight = combinedGrain * 0.5 -
+                        scratchPattern * 0.3 -
+                        porePattern * 0.5 -
+                        seamFactor * seamDepth;
+
+    float heightField = proceduralHeight + (mapHeight - 0.5) * displacementMapStrength;
+
+    displacement = heightField * displacementScale;
+
+    float bumpOffset = 0.01;
+    float dhdu = (noise("perlin", (P + vector(bumpOffset, 0, 0)) * grainScale) -
+                  noise("perlin", (P - vector(bumpOffset, 0, 0)) * grainScale)) / (2.0 * bumpOffset);
+    float dhdv = (noise("perlin", (P + vector(0, bumpOffset, 0)) * grainScale) -
+                  noise("perlin", (P - vector(0, bumpOffset, 0)) * grainScale)) / (2.0 * bumpOffset);
+
+    vector tangentU = Dx(P);
+    vector tangentV = Dy(P);
+
+    normal Nperturbed = normalize(N - dhdu * normalize(cross(N, tangentV)) * bumpScale -
+                                      dhdv * normalize(cross(tangentU, N)) * bumpScale);
+
+    vector tangentNormal = vector(
+        normalTextureColor[0] * 2.0 - 1.0,
+        (normalTextureColor[1] * 2.0 - 1.0) * normalFlipY,
+        normalTextureColor[2] * 2.0 - 1.0
+    );
+
+    vector Tu = normalize(dPdu);
+    vector Tv = normalize(dPdv);
+    normal mapNormal = normal(normalize(tangentNormal[0] * Tu +
+                                        tangentNormal[1] * Tv +
+                                        tangentNormal[2] * normalize(vector(N))));
+
+    outNormal = normal(normalize(mix(vector(Nperturbed), vector(mapNormal), normalMapStrength)));
+}

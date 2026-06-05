@@ -1,0 +1,304 @@
+# ============================================================
+# scene.rib
+# RenderMan - Glass, Juice, Ice, Coin, and Table Still Life
+# ============================================================
+
+Option "searchpath" "string archive" ["./assets:@"]
+Option "searchpath" "string texture" ["./textures:@"]
+Option "searchpath" "string shader" ["./shaders:@"]
+
+Hider "raytrace" "int incremental" [1] "int minsamples" [16] "int maxsamples" [768]
+PixelVariance 0.004
+
+Integrator "PxrPathTracer" "integrator"
+
+Format 1920 1080 1
+
+# Preview-only display.
+# Do not add openexr here, because on this Windows/It setup the secondary EXR display can make the It preview black.
+# RGB is used instead of RGBA to avoid alpha-premultiplication making exported images appear black.
+Display "renders/final_glass_juice_ice_coin_still_life_preview" "it" "rgb"
+
+
+Projection "perspective" "fov" [45]
+
+# ---------------- Depth of Field ----------------
+# Format: DepthOfField fstop focalLength focalDistance
+# Smaller fstop = stronger blur.
+# This gentle setting keeps the glass, juice, and ice readable while softening the back table/background.
+# DepthOfField 45 50 30
+
+# ---------------- Camera ----------------
+Translate 0 -10 32
+Rotate -10 35 0 0
+Scale 1 1 -1
+
+WorldBegin
+
+    # ---------------- HDR Dome Light ----------------
+    TransformBegin
+        Rotate -90 1 0 0
+        Rotate 30 0 0 1
+        Light "PxrDomeLight" "domeLight"
+            # Slightly brighter HDR for clearer glass and juice, while still avoiding the previous over-white edge.
+            "float exposure" [-0.62]
+            "string lightColorMap" ["Sky.tex"]
+    TransformEnd
+
+   # ---------------- Table ----------------
+AttributeBegin
+    Attribute "identifier" "name" ["table"]
+
+    Pattern "realistic_wood_table" "tablePattern"
+        "string woodTexture" ["wood.tex"]
+        "string normalTexture" ["table_normal.tex"]
+        "string displacementTexture" ["table_displacement.tex"]
+        "float textureRepeatU" [5.0]
+        "float textureRepeatV" [1.8]
+        "float textureRotation" [0.0]
+
+        "float grainScale" [48.0]
+        "float grainDetail" [3.8]
+        "float grainDistortion" [0.38]
+        "float grainContrast" [0.68]
+
+        "float fineNoiseScale" [185.0]
+        "float fineNoiseStrength" [0.16]
+
+        "float plankWidth" [4.8]
+        "float plankVariation" [0.22]
+        "float seamWidth" [0.018]
+        "float seamDepth" [0.085]
+
+        "float scratchScale" [92.0]
+        "float scratchStrength" [0.58]
+        "float scratchThreshold" [0.81]
+
+        "float poreScale" [425.0]
+        "float poreStrength" [0.30]
+        "float poreThreshold" [0.87]
+
+        "float bumpScale" [0.048]
+        "float displacementScale" [0.018]
+        "float normalMapStrength" [0.78]
+        "float displacementMapStrength" [0.62]
+        "float normalFlipY" [1.0]
+
+        "float baseRoughness" [0.66]
+        "float grainRoughnessVariation" [0.26]
+        "float scratchRoughnessBoost" [0.38]
+
+        "color darkWoodTint" [0.082 0.042 0.019]
+        "color lightWoodTint" [0.88 0.60 0.30]
+        "float colorVariation" [0.19]
+
+    Bxdf "PxrDisney" "tableMaterial"
+        "reference color baseColor" ["tablePattern:diffuseColor"]
+        "float metallic" [0.0]
+        "float specular" [0.06]
+        "reference float roughness" ["tablePattern:roughness"]
+        "reference normal bumpNormal" ["tablePattern:outNormal"]
+
+    Attribute "displacementbound" "float sphere" [0.045] "string CoordinateSystem" ["shader"]
+    Displace "PxrDisplace" "tableDisplacement"
+        "int enabled" [1]
+        "reference float dispScalar" ["tablePattern:displacement"]
+        "float dispAmount" [1.0]
+
+    ReadArchive "table.rib"
+
+AttributeEnd
+
+    # ---------------- Glass Cup ----------------
+    AttributeBegin
+        Attribute "identifier" "name" ["glass"]
+        Attribute "visibility" "int transmission" [1]
+        Attribute "trace" "int maxdiffusedepth" [5] "int maxspeculardepth" [8] "int caustics" [0]
+
+        Bxdf "PxrSurface" "glassMaterial"
+            # Brighter clear glass:
+            # higher refraction and cleaner transmission, with moderate reflection to avoid a dead-white edge.
+            "float glassRoughness" [0.038]
+            "float diffuseGain" [0.0]
+            "float refractionGain" [1.0]
+            "float reflectionGain" [0.54]
+            "color refractionColor" [0.98 1.0 1.0]
+            "float glassIor" [1.50]
+            "float glassAnisotropy" [0.0]
+            "int thinGlass" [0]
+
+        TransformBegin
+            Translate 0 0.05 0
+            Scale 1.0 1.0 1.0
+
+            ReadArchive "glass.rib"
+        TransformEnd
+
+    AttributeEnd
+
+    # ---------------- Juice ----------------
+    AttributeBegin
+        Attribute "identifier" "name" ["juice"]
+        Attribute "visibility" "int transmission" [1]
+        Attribute "trace" "int maxdiffusedepth" [6] "int maxspeculardepth" [10]
+
+        Pattern "realistic_juice" "juicePattern"
+            # 基础颜色 - 更明亮的红色果汁，提高透光感
+            "color juiceBaseColor" [1.00 0.32 0.22]
+            "color juiceDarkColor" [0.92 0.18 0.13]
+            "float colorIntensity" [1.18]
+
+            # 果肉颗粒 - 更低密度，避免果汁显得浑浊
+            "float pulpScale" [8.5]
+            "float pulpDensity" [0.012]
+            "float pulpSize" [0.12]
+            "float pulpThreshold" [0.65]
+            "color pulpColor" [1.00 0.38 0.25]
+
+            # 细小悬浮物 - 极低密度以提高透明度
+            "float suspensionScale" [25.0]
+            "float suspensionDensity" [0.004]
+            "float suspensionThreshold" [0.92]
+
+            # 浑浊度和深度 - 更低浑浊度、更高吸收深度，使果汁更透亮
+            "float turbidity" [0.004]
+            "float absorptionDepth" [45.0]
+            "color absorptionColor" [1.0 0.78 0.68]
+
+            # 折射和透明度 - 极高透明度
+            "float ior" [1.34]
+            "float refractionStrength" [1.0]
+            "float transmissionGain" [2.5]
+
+            # 高光 - 清澈液体的光滑表面，增强湿润透亮感
+            "float specularRoughness" [0.008]
+            "float specularGain" [0.95]
+            "color specularTint" [1.0 1.0 1.0]
+
+            # 次表面散射 - 清澈液体的透光性
+            "float sssGain" [0.36]
+            "color sssColor" [1.0 0.48 0.36]
+            "float sssDmfp" [3.5]
+
+            # 微小气泡 - 增强气泡
+            "float bubbleScale" [35.0]
+            "float bubbleDensity" [0.18]
+            "float bubbleThreshold" [0.75]
+
+            # 液体流动
+            "float flowScale" [3.5]
+            "float flowSpeed" [0.5]
+            "float flowStrength" [0.15]
+
+        Bxdf "PxrSurface" "juiceMaterial"
+            # 漫反射 - 极低以提高透明度
+            "reference color diffuseColor" ["juicePattern:diffuseColor"]
+            "float diffuseGain" [0.0]
+
+            # 高光反射 - 增强高光
+            "reference float specularRoughness" ["juicePattern:roughness"]
+            "float specularGain" [0.95]
+            "color specularFaceColor" [1.0 1.0 1.0]
+            "int specularFresnelMode" [1]
+
+            # 折射（清澈液体的透明效果）
+            "reference float glassRoughness" ["juicePattern:roughness"]
+            "reference color refractionColor" ["juicePattern:transmissionColor"]
+            "float refractionGain" [1.0]
+            "float glassIor" [1.34]
+            "int thinGlass" [0]
+
+            # 次表面散射（清澈液体的透光特性）
+            "reference color subsurfaceColor" ["juicePattern:subsurfaceColor"]
+            "reference float subsurfaceGain" ["juicePattern:sss"]
+            "color subsurfaceDmfp" [4.0 3.5 3.0]
+            "float singlescatterGain" [0.15]
+            "color singlescatterMfp" [5.0 4.0 3.5]
+
+            # 反射 - 适度提高，让液体更有湿润亮面，但避免过曝
+            "float reflectionGain" [0.12]
+
+        TransformBegin
+            Translate 0 0 0
+            Scale 2.0 2.0 2.0
+
+            ReadArchive "juice2.rib"
+        TransformEnd
+
+    AttributeEnd
+
+    # ---------------- Ice Cubes Beside Glass ----------------
+    AttributeBegin
+        Attribute "identifier" "name" ["ice"]
+        Attribute "visibility" "int transmission" [1]
+        # Ice needs a few extra specular/refraction bounces because it sits next to glass and liquid.
+        Attribute "trace" "int maxdiffusedepth" [5] "int maxspeculardepth" [10] "int caustics" [0]
+
+        Pattern "ice_crystal" "iceCrystalPattern"
+            # Larger scale + higher crackScale gives readable internal cracks instead of flat colour noise.
+            "float scale" [2.4]
+            "float cloudScale" [3.2]
+            "float crackScale" [9.0]
+            "float scratchScale" [42.0]
+            "float bumpStrength" [0.018]
+            "color clearIceColor" [0.68 0.88 0.98]
+            "color frostColor" [0.92 0.98 1.0]
+            "color crackColor" [0.96 0.99 1.0]
+
+        Bxdf "PxrSurface" "iceMaterial"
+            "reference float glassRoughness" ["iceCrystalPattern:roughness"]
+            "reference color diffuseColor" ["iceCrystalPattern:frostDiffuse"]
+            "reference float diffuseGain" ["iceCrystalPattern:frostGain"]
+            "reference normal bumpNormal" ["iceCrystalPattern:iceNormal"]
+
+            # Main transparent ice body.
+            "float refractionGain" [0.52]
+            "float reflectionGain" [0.38]
+            "reference color refractionColor" ["iceCrystalPattern:iceColor"]
+            "color specularFaceColor" [1.0 1.0 1.0]
+            "float glassIor" [1.31]
+            "int thinGlass" [0]
+
+            # A very small milky scatter helps the ice read as solid instead of invisible glass.
+            "float subsurfaceGain" [0.025]
+            "color subsurfaceColor" [0.78 0.94 1.0]
+            "color subsurfaceDmfp" [2.0 2.4 3.0]
+
+        TransformBegin
+            Translate 0 0 0
+            Scale 1.0 1.0 1.0
+
+            ReadArchive "ice.rib"
+        TransformEnd
+
+    AttributeEnd
+
+    # ---------------- Metal Coin ----------------
+    AttributeBegin
+        Attribute "identifier" "name" ["coin"]
+
+        Pattern "coin_metal" "coinPattern"
+            "string normalTexture" ["coin_normal.tex"]
+            "float normalStrength" [0.84]
+            "float scratchScale" [165.0]
+            "float scratchStrength" [0.26]
+            "float radialScale" [58.0]
+            "float radialStrength" [0.14]
+
+        Bxdf "PxrDisney" "coinMaterial"
+            "reference color baseColor" ["coinPattern:baseColor"]
+            "float metallic" [1.0]
+            "float specular" [0.95]
+            "reference float roughness" ["coinPattern:roughness"]
+            "reference normal bumpNormal" ["coinPattern:outNormal"]
+
+        TransformBegin
+            Translate 0 0 0
+            Scale 1.0 1.0 1.0
+
+            ReadArchive "coin.rib"
+        TransformEnd
+
+    AttributeEnd
+
+WorldEnd

@@ -1,0 +1,62 @@
+// coin_metal.osl
+// Metallic coin shader with normal-map relief, fine scratches, and subtle radial wear.
+
+#include "stdosl.h"
+
+shader coin_metal(
+    string normalTexture = "coin_normal.tex",
+    float normalStrength = 0.84,
+    float scratchScale = 165.0,
+    float scratchStrength = 0.26,
+    float radialScale = 58.0,
+    float radialStrength = 0.14,
+
+    output color baseColor = color(1.0, 0.75, 0.30),
+    output float roughness = 0.22,
+    output normal outNormal = N
+)
+{
+    point objP = transform("object", P);
+
+    float n1 = noise("perlin", objP * 8.0);
+    float n2 = noise("perlin", objP * 28.0);
+    float radial = 0.5 + 0.5 * sin((u - 0.5) * radialScale + n1 * 1.7);
+
+    float scratchWave = abs(sin((u * 1.15 + v * 0.35) * scratchScale + n2 * 3.2));
+    float scratches = 1.0 - smoothstep(0.0, 0.055, scratchWave);
+    float tarnish = smoothstep(0.36, 0.72, noise("perlin", objP * 4.2));
+
+    color normalSample = texture(normalTexture, u, v);
+    vector tangentSample = vector(
+        normalSample[0] * 2.0 - 1.0,
+        normalSample[1] * 2.0 - 1.0,
+        normalSample[2] * 2.0 - 1.0
+    );
+
+    vector Nu = normalize(vector(N));
+    vector Tu = normalize(dPdu);
+    vector Tv = normalize(dPdv);
+    normal mappedNormal = normal(normalize(
+        tangentSample[0] * Tu +
+        tangentSample[1] * Tv +
+        tangentSample[2] * Nu
+    ));
+
+    vector proceduralNormal = normalize(
+        Nu +
+        (radial - 0.5) * radialStrength * Tu -
+        scratches * scratchStrength * Tv
+    );
+
+    outNormal = normal(normalize(mix(proceduralNormal, vector(mappedNormal), normalStrength)));
+
+    color darkGold = color(0.68, 0.43, 0.13);
+    color warmGold = color(1.0, 0.82, 0.38);
+    color brightGlint = color(1.0, 0.94, 0.62);
+    color agedBrown = color(0.36, 0.24, 0.12);
+    baseColor = mix(darkGold, warmGold, clamp(radial * 0.48 + 0.42, 0.0, 1.0));
+    baseColor = mix(baseColor, brightGlint, scratches * 0.10);
+    baseColor = mix(baseColor, agedBrown, tarnish * 0.08);
+
+    roughness = clamp(0.13 + scratches * 0.13 + (1.0 - radial) * 0.07 + tarnish * 0.04, 0.12, 0.38);
+}

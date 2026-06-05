@@ -1,0 +1,488 @@
+OpenShadingLanguage 1.00
+# Compiled by oslc 1.13.0.@PROJECT_VERSION_TWEAK@"dev"
+# options: -o .\shaders\ice_crystal.oso
+shader ice_crystal
+param	float	scale	2.4000001		%read{6,6} %write{2147483647,-1} %derivs
+param	float	cloudScale	3.20000005		%read{7,7} %write{2147483647,-1} %derivs
+param	float	crackScale	9		%read{28,28} %write{2147483647,-1} %derivs
+param	float	scratchScale	42		%read{70,70} %write{2147483647,-1} %derivs
+param	float	bumpStrength	0.0179999992		%read{164,164} %write{2147483647,-1} %derivs
+param	color	clearIceColor	0.680000007 0.879999995 0.980000019		%read{125,125} %write{2147483647,-1}
+param	color	frostColor	0.920000017 0.980000019 1		%read{125,134} %write{2147483647,-1}
+param	color	crackColor	0.959999979 0.99000001 1		%read{127,134} %write{2147483647,-1}
+oparam	color	iceColor	0.680000007 0.879999995 0.980000019		%read{2147483647,-1} %write{127,127}
+oparam	color	frostDiffuse	0.920000017 0.980000019 1		%read{2147483647,-1} %write{134,134}
+oparam	float	frostGain	0.00999999978		%read{2147483647,-1} %write{145,145}
+oparam	float	roughness	0.0299999993		%read{2147483647,-1} %write{156,156}
+oparam	normal	iceNormal	0 0 0		%read{2147483647,-1} %write{0,168} %initexpr
+global	point	P	%read{5,167} %write{2147483647,-1} %derivs
+global	vector	I	%read{2,2} %write{2147483647,-1} %derivs
+global	normal	N	%read{0,1} %write{2147483647,-1} %derivs
+local	normal	Nn	%read{98,165} %write{1,1} %derivs
+local	vector	V	%read{99,99} %write{3,3} %derivs
+local	point	q	%read{7,70} %write{6,6} %derivs
+local	point	cloudP	%read{9,17} %write{8,8} %derivs
+local	float	cloudA	%read{22,22} %write{11,11} %derivs
+local	float	cloudB	%read{23,23} %write{16,16} %derivs
+local	float	cloudC	%read{25,25} %write{21,21} %derivs
+local	float	cloudyCore	%read{103,157} %write{27,27} %derivs
+local	point	cq	%read{29,55} %write{28,28} %derivs
+local	float	crackX	%read{62,62} %write{39,39} %derivs
+local	float	crackY	%read{63,63} %write{50,50} %derivs
+local	float	crackZ	%read{65,65} %write{61,61} %derivs
+local	float	cracks	%read{104,158} %write{69,69} %derivs
+local	point	sq	%read{71,86} %write{70,70} %derivs
+local	float	scratchA	%read{93,93} %write{81,81} %derivs
+local	float	scratchB	%read{93,93} %write{92,92} %derivs
+local	float	scratches	%read{106,160} %write{97,97} %derivs
+local	float	facingEdge	%read{102,102} %write{101,101} %derivs
+local	float	edgeFrost	%read{108,162} %write{102,102} %derivs
+local	float	frostMask	%read{2147483647,-1} %write{112,112}
+local	float	crackMask	%read{126,128} %write{118,118}
+local	color	milkyIce	%read{127,127} %write{125,125}
+local	float	iceHeight	%read{166,166} %write{164,164} %derivs
+local	point	bumpedP	%read{168,168} %write{167,167} %derivs
+temp	vector	$tmp1	%read{3,3} %write{2,2} %derivs
+temp	point	$tmp2	%read{6,6} %write{5,5} %derivs
+const	string	$const1	"object"		%read{5,5} %write{2147483647,-1}
+const	string	$const2	"transform"		%read{4,4} %write{2147483647,-1}
+const	string	$const3	"common"		%read{5,5} %write{2147483647,-1}
+temp	point	$tmp3	%read{8,8} %write{7,7} %derivs
+const	point	$const4	4.69999981 1.29999995 8.89999962		%read{8,8} %write{2147483647,-1}
+const	float	$const5	0.5		%read{10,22} %write{2147483647,-1}
+temp	float	$tmp5	%read{10,10} %write{9,9} %derivs
+const	string	$const6	"perlin"		%read{9,89} %write{2147483647,-1}
+temp	float	$tmp6	%read{11,11} %write{10,10} %derivs
+temp	float	$tmp7	%read{15,15} %write{14,14} %derivs
+const	float	$const7	2.17000008		%read{12,12} %write{2147483647,-1}
+temp	point	$tmp8	%read{13,13} %write{12,12} %derivs
+const	point	$const8	1.10000002 5.30000019 2.4000001		%read{13,13} %write{2147483647,-1}
+temp	point	$tmp10	%read{14,14} %write{13,13} %derivs
+temp	float	$tmp11	%read{16,16} %write{15,15} %derivs
+temp	float	$tmp12	%read{20,20} %write{19,19} %derivs
+const	float	$const9	4.0999999		%read{17,17} %write{2147483647,-1}
+temp	point	$tmp13	%read{18,18} %write{17,17} %derivs
+const	point	$const10	7 0.300000012 6.19999981		%read{18,18} %write{2147483647,-1}
+temp	point	$tmp15	%read{19,19} %write{18,18} %derivs
+temp	float	$tmp16	%read{21,21} %write{20,20} %derivs
+const	float	$const11	0.469999999		%read{27,27} %write{2147483647,-1}
+const	float	$const12	0.899999976		%read{27,27} %write{2147483647,-1}
+temp	float	$tmp17	%read{24,24} %write{22,22} %derivs
+const	float	$const13	0.340000004		%read{23,23} %write{2147483647,-1}
+temp	float	$tmp18	%read{24,24} %write{23,23} %derivs
+temp	float	$tmp19	%read{26,26} %write{24,24} %derivs
+const	float	$const14	0.159999996		%read{25,25} %write{2147483647,-1}
+temp	float	$tmp20	%read{26,26} %write{25,25} %derivs
+temp	float	$tmp21	%read{27,27} %write{26,26} %derivs
+const	float	$const15	1		%read{39,132} %write{2147483647,-1}
+temp	float	$tmp22	%read{39,39} %write{38,38} %derivs
+const	float	$const16	0.0179999992		%read{38,49} %write{2147483647,-1}
+const	float	$const17	0.0949999988		%read{38,38} %write{2147483647,-1}
+temp	float	$tmp23	%read{38,38} %write{37,37} %derivs
+temp	float	$tmp24	%read{37,37} %write{36,36} %derivs
+temp	point	$tmp25	%read{36,36} %write{35,35} %derivs
+const	int	$const18	0		%read{29,82} %write{2147483647,-1}
+temp	float	$tmp26	%read{30,30} %write{29,29} %derivs
+const	float	$const19	0.379999995		%read{30,30} %write{2147483647,-1}
+temp	float	$tmp27	%read{35,35} %write{30,30} %derivs
+const	int	$const20	1		%read{31,84} %write{2147483647,-1}
+temp	float	$tmp28	%read{32,32} %write{31,31} %derivs
+const	float	$const21	1.70000005		%read{32,32} %write{2147483647,-1}
+temp	float	$tmp29	%read{35,35} %write{32,32} %derivs
+const	int	$const22	2		%read{33,86} %write{2147483647,-1}
+temp	float	$tmp30	%read{34,34} %write{33,33} %derivs
+const	float	$const23	0.720000029		%read{34,34} %write{2147483647,-1}
+temp	float	$tmp31	%read{35,35} %write{34,34} %derivs
+temp	float	$tmp32	%read{50,50} %write{49,49} %derivs
+const	float	$const24	0.0900000036		%read{49,49} %write{2147483647,-1}
+temp	float	$tmp33	%read{49,49} %write{48,48} %derivs
+temp	float	$tmp34	%read{48,48} %write{47,47} %derivs
+temp	point	$tmp35	%read{47,47} %write{46,46} %derivs
+temp	float	$tmp36	%read{41,41} %write{40,40} %derivs
+const	float	$const25	1.25		%read{41,41} %write{2147483647,-1}
+temp	float	$tmp37	%read{46,46} %write{41,41} %derivs
+temp	float	$tmp38	%read{43,43} %write{42,42} %derivs
+const	float	$const26	0.319999993		%read{43,126} %write{2147483647,-1}
+temp	float	$tmp39	%read{46,46} %write{43,43} %derivs
+temp	float	$tmp40	%read{45,45} %write{44,44} %derivs
+const	float	$const27	1.85000002		%read{45,45} %write{2147483647,-1}
+temp	float	$tmp41	%read{46,46} %write{45,45} %derivs
+temp	float	$tmp42	%read{61,61} %write{60,60} %derivs
+const	float	$const28	0.0149999997		%read{60,60} %write{2147483647,-1}
+const	float	$const29	0.0780000016		%read{60,60} %write{2147483647,-1}
+temp	float	$tmp43	%read{60,60} %write{59,59} %derivs
+temp	float	$tmp44	%read{59,59} %write{58,58} %derivs
+temp	point	$tmp45	%read{58,58} %write{57,57} %derivs
+temp	float	$tmp46	%read{52,52} %write{51,51} %derivs
+const	float	$const30	1.79999995		%read{52,52} %write{2147483647,-1}
+temp	float	$tmp47	%read{57,57} %write{52,52} %derivs
+temp	float	$tmp48	%read{54,54} %write{53,53} %derivs
+const	float	$const31	1.14999998		%read{54,54} %write{2147483647,-1}
+temp	float	$tmp49	%read{57,57} %write{54,54} %derivs
+temp	float	$tmp50	%read{56,56} %write{55,55} %derivs
+const	float	$const32	0.280000001		%read{56,108} %write{2147483647,-1}
+temp	float	$tmp51	%read{57,57} %write{56,56} %derivs
+const	float	$const33	0.550000012		%read{62,104} %write{2147483647,-1}
+temp	float	$tmp52	%read{64,64} %write{62,62} %derivs
+const	float	$const34	0.449999988		%read{63,160} %write{2147483647,-1}
+temp	float	$tmp53	%read{64,64} %write{63,63} %derivs
+temp	float	$tmp54	%read{66,66} %write{64,64} %derivs
+const	float	$const35	0.300000012		%read{65,65} %write{2147483647,-1}
+temp	float	$tmp55	%read{66,66} %write{65,65} %derivs
+temp	float	$tmp56	%read{68,68} %write{66,66} %derivs
+const	float	$const36	0		%read{69,133} %write{2147483647,-1}
+const	string	$const37	"clamp"		%read{67,154} %write{2147483647,-1}
+temp	float	$tmp57	%read{69,69} %write{68,68} %derivs
+temp	float	$tmp58	%read{81,81} %write{80,80} %derivs
+const	float	$const38	0.0120000001		%read{80,156} %write{2147483647,-1}
+const	float	$const39	0.0549999997		%read{80,80} %write{2147483647,-1}
+temp	float	$tmp59	%read{80,80} %write{79,79} %derivs
+temp	float	$tmp60	%read{79,79} %write{78,78} %derivs
+temp	point	$tmp61	%read{78,78} %write{77,77} %derivs
+temp	float	$tmp62	%read{72,72} %write{71,71} %derivs
+temp	float	$tmp63	%read{77,77} %write{72,72} %derivs
+temp	float	$tmp64	%read{74,74} %write{73,73} %derivs
+const	float	$const40	0.100000001		%read{74,137} %write{2147483647,-1}
+temp	float	$tmp65	%read{77,77} %write{74,74} %derivs
+temp	float	$tmp66	%read{76,76} %write{75,75} %derivs
+const	float	$const41	0.219999999		%read{76,144} %write{2147483647,-1}
+temp	float	$tmp67	%read{77,77} %write{76,76} %derivs
+temp	float	$tmp68	%read{92,92} %write{91,91} %derivs
+const	float	$const42	0.0599999987		%read{91,91} %write{2147483647,-1}
+temp	float	$tmp69	%read{91,91} %write{90,90} %derivs
+temp	float	$tmp70	%read{90,90} %write{89,89} %derivs
+temp	point	$tmp71	%read{89,89} %write{88,88} %derivs
+temp	float	$tmp72	%read{83,83} %write{82,82} %derivs
+const	float	$const43	0.180000007		%read{83,102} %write{2147483647,-1}
+temp	float	$tmp73	%read{88,88} %write{83,83} %derivs
+temp	float	$tmp74	%read{85,85} %write{84,84} %derivs
+temp	float	$tmp75	%read{88,88} %write{85,85} %derivs
+temp	float	$tmp76	%read{87,87} %write{86,86} %derivs
+const	float	$const44	0.349999994		%read{87,157} %write{2147483647,-1}
+temp	float	$tmp77	%read{88,88} %write{87,87} %derivs
+temp	float	$tmp78	%read{94,94} %write{93,93} %derivs
+temp	float	$tmp79	%read{96,96} %write{94,94} %derivs
+temp	float	$tmp80	%read{97,97} %write{96,96} %derivs
+temp	float	$tmp81	%read{101,101} %write{100,100} %derivs
+temp	float	$tmp82	%read{100,100} %write{99,99} %derivs
+temp	vector	$tmp83	%read{99,99} %write{98,98} %derivs
+const	float	$const45	0.819999993		%read{102,102} %write{2147483647,-1}
+temp	float	$tmp84	%read{105,105} %write{103,103}
+temp	float	$tmp85	%read{105,105} %write{104,104}
+temp	float	$tmp86	%read{107,107} %write{105,105}
+temp	float	$tmp87	%read{107,107} %write{106,106}
+temp	float	$tmp88	%read{109,109} %write{107,107}
+temp	float	$tmp89	%read{109,109} %write{108,108}
+temp	float	$tmp90	%read{111,111} %write{109,109}
+temp	float	$tmp91	%read{112,112} %write{111,111}
+const	float	$const46	0.850000024		%read{113,113} %write{2147483647,-1}
+temp	float	$tmp92	%read{115,115} %write{113,113}
+temp	float	$tmp93	%read{115,115} %write{114,114}
+temp	float	$tmp94	%read{117,117} %write{115,115}
+temp	float	$tmp95	%read{118,118} %write{117,117}
+temp	float	$tmp96	%read{125,125} %write{124,124}
+temp	float	$tmp97	%read{121,121} %write{119,119}
+const	float	$const47	0.25		%read{120,162} %write{2147483647,-1}
+temp	float	$tmp98	%read{121,121} %write{120,120}
+temp	float	$tmp99	%read{123,123} %write{121,121}
+temp	float	$tmp100	%read{124,124} %write{123,123}
+temp	float	$tmp101	%read{127,127} %write{126,126}
+temp	float	$tmp102	%read{134,134} %write{133,133}
+const	float	$const48	0.699999988		%read{128,128} %write{2147483647,-1}
+temp	float	$tmp103	%read{130,130} %write{128,128}
+const	float	$const49	0.200000003		%read{129,129} %write{2147483647,-1}
+temp	float	$tmp104	%read{130,130} %write{129,129}
+temp	float	$tmp105	%read{132,132} %write{130,130}
+temp	float	$tmp106	%read{133,133} %write{132,132}
+const	float	$const50	0.00400000019		%read{136,145} %write{2147483647,-1}
+const	float	$const51	0.0399999991		%read{135,146} %write{2147483647,-1}
+temp	float	$tmp107	%read{136,136} %write{135,135}
+temp	float	$tmp108	%read{138,138} %write{136,136}
+temp	float	$tmp109	%read{138,138} %write{137,137}
+temp	float	$tmp110	%read{140,140} %write{138,138}
+const	float	$const52	0.0350000001		%read{139,139} %write{2147483647,-1}
+temp	float	$tmp111	%read{140,140} %write{139,139}
+temp	float	$tmp112	%read{142,142} %write{140,140}
+const	float	$const53	0.0649999976		%read{141,141} %write{2147483647,-1}
+temp	float	$tmp113	%read{142,142} %write{141,141}
+temp	float	$tmp114	%read{144,144} %write{142,142}
+temp	float	$tmp115	%read{145,145} %write{144,144}
+temp	float	$tmp116	%read{147,147} %write{146,146}
+temp	float	$tmp117	%read{149,149} %write{147,147}
+const	float	$const54	0.125		%read{148,148} %write{2147483647,-1}
+temp	float	$tmp118	%read{149,149} %write{148,148}
+temp	float	$tmp119	%read{151,151} %write{149,149}
+const	float	$const55	0.0700000003		%read{150,150} %write{2147483647,-1}
+temp	float	$tmp120	%read{151,151} %write{150,150}
+temp	float	$tmp121	%read{153,153} %write{151,151}
+const	float	$const56	0.0500000007		%read{152,152} %write{2147483647,-1}
+temp	float	$tmp122	%read{153,153} %write{152,152}
+temp	float	$tmp123	%read{155,155} %write{153,153}
+const	float	$const57	0.239999995		%read{155,155} %write{2147483647,-1}
+temp	float	$tmp124	%read{156,156} %write{155,155}
+temp	float	$tmp125	%read{159,159} %write{157,157} %derivs
+const	float	$const58	0.800000012		%read{158,158} %write{2147483647,-1}
+temp	float	$tmp126	%read{159,159} %write{158,158} %derivs
+temp	float	$tmp127	%read{161,161} %write{159,159} %derivs
+temp	float	$tmp128	%read{161,161} %write{160,160} %derivs
+temp	float	$tmp129	%read{163,163} %write{161,161} %derivs
+temp	float	$tmp130	%read{163,163} %write{162,162} %derivs
+temp	float	$tmp131	%read{164,164} %write{163,163} %derivs
+temp	vector	$tmp132	%read{166,166} %write{165,165} %derivs
+temp	vector	$tmp133	%read{167,167} %write{166,166} %derivs
+code iceNormal
+# .\\shaders\\ice_crystal.osl:15
+# )
+	assign		iceNormal N 	%filename{".\\shaders\\ice_crystal.osl"} %line{15} %argrw{"wr"}
+code ___main___
+# .\\shaders\\ice_crystal.osl:18
+#     vector V = normalize(-I);
+	normalize	Nn N 	%filename{".\\shaders\\ice_crystal.osl"} %line{18} %argrw{"wr"}
+# .\\shaders\\ice_crystal.osl:19
+# 
+	neg		$tmp1 I 	%line{19} %argrw{"wr"}
+	normalize	V $tmp1 	%argrw{"wr"}
+# .\\shaders\\ice_crystal.osl:21
+# 
+	functioncall	$const2 6 	%line{21} %argrw{"r"}
+# C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h:263
+# point  transform (string to, point p)  { return transform("common",to,p); }
+	transform	$tmp2 $const3 $const1 P 	%filename{"C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h"} %line{263} %argrw{"wrrr"}
+# .\\shaders\\ice_crystal.osl:21
+# 
+	mul		q $tmp2 scale 	%filename{".\\shaders\\ice_crystal.osl"} %line{21} %argrw{"wrr"}
+# .\\shaders\\ice_crystal.osl:24
+#     float cloudA = 0.5 + 0.5 * noise("perlin", cloudP);
+	mul		$tmp3 q cloudScale 	%line{24} %argrw{"wrr"}
+	add		cloudP $tmp3 $const4 	%argrw{"wrr"}
+# .\\shaders\\ice_crystal.osl:25
+#     float cloudB = 0.5 + 0.5 * noise("perlin", cloudP * 2.17 + point(1.1, 5.3, 2.4));
+	noise		$tmp5 $const6 cloudP 	%line{25} %argrw{"wrr"}
+	mul		$tmp6 $const5 $tmp5 	%argrw{"wrr"}
+	add		cloudA $const5 $tmp6 	%argrw{"wrr"}
+# .\\shaders\\ice_crystal.osl:26
+#     float cloudC = 0.5 + 0.5 * noise("perlin", cloudP * 4.10 + point(7.0, 0.3, 6.2));
+	mul		$tmp8 cloudP $const7 	%line{26} %argrw{"wrr"}
+	add		$tmp10 $tmp8 $const8 	%argrw{"wrr"}
+	noise		$tmp7 $const6 $tmp10 	%argrw{"wrr"}
+	mul		$tmp11 $const5 $tmp7 	%argrw{"wrr"}
+	add		cloudB $const5 $tmp11 	%argrw{"wrr"}
+# .\\shaders\\ice_crystal.osl:27
+#     float cloudyCore = smoothstep(0.47, 0.90, cloudA * 0.50 + cloudB * 0.34 + cloudC * 0.16);
+	mul		$tmp13 cloudP $const9 	%line{27} %argrw{"wrr"}
+	add		$tmp15 $tmp13 $const10 	%argrw{"wrr"}
+	noise		$tmp12 $const6 $tmp15 	%argrw{"wrr"}
+	mul		$tmp16 $const5 $tmp12 	%argrw{"wrr"}
+	add		cloudC $const5 $tmp16 	%argrw{"wrr"}
+# .\\shaders\\ice_crystal.osl:28
+# 
+	mul		$tmp17 cloudA $const5 	%line{28} %argrw{"wrr"}
+	mul		$tmp18 cloudB $const13 	%argrw{"wrr"}
+	add		$tmp19 $tmp17 $tmp18 	%argrw{"wrr"}
+	mul		$tmp20 cloudC $const14 	%argrw{"wrr"}
+	add		$tmp21 $tmp19 $tmp20 	%argrw{"wrr"}
+	smoothstep	cloudyCore $const11 $const12 $tmp21 	%argrw{"wrrr"}
+# .\\shaders\\ice_crystal.osl:31
+#     float crackX = 1.0 - smoothstep(0.018, 0.095, abs(noise("perlin", point(cq[0] * 0.38, cq[1] * 1.70, cq[2] * 0.72))));
+	mul		cq q crackScale 	%line{31} %argrw{"wrr"}
+# .\\shaders\\ice_crystal.osl:32
+#     float crackY = 1.0 - smoothstep(0.018, 0.090, abs(noise("perlin", point(cq[0] * 1.25, cq[1] * 0.32, cq[2] * 1.85))));
+	compref		$tmp26 cq $const18 	%line{32} %argrw{"wrr"}
+	mul		$tmp27 $tmp26 $const19 	%argrw{"wrr"}
+	compref		$tmp28 cq $const20 	%argrw{"wrr"}
+	mul		$tmp29 $tmp28 $const21 	%argrw{"wrr"}
+	compref		$tmp30 cq $const22 	%argrw{"wrr"}
+	mul		$tmp31 $tmp30 $const23 	%argrw{"wrr"}
+	point		$tmp25 $tmp27 $tmp29 $tmp31 	%argrw{"wrrr"}
+	noise		$tmp24 $const6 $tmp25 	%argrw{"wrr"}
+	abs		$tmp23 $tmp24 	%argrw{"wr"}
+	smoothstep	$tmp22 $const16 $const17 $tmp23 	%argrw{"wrrr"}
+	sub		crackX $const15 $tmp22 	%argrw{"wrr"}
+# .\\shaders\\ice_crystal.osl:33
+#     float crackZ = 1.0 - smoothstep(0.015, 0.078, abs(noise("perlin", point(cq[0] * 1.80, cq[1] * 1.15, cq[2] * 0.28))));
+	compref		$tmp36 cq $const18 	%line{33} %argrw{"wrr"}
+	mul		$tmp37 $tmp36 $const25 	%argrw{"wrr"}
+	compref		$tmp38 cq $const20 	%argrw{"wrr"}
+	mul		$tmp39 $tmp38 $const26 	%argrw{"wrr"}
+	compref		$tmp40 cq $const22 	%argrw{"wrr"}
+	mul		$tmp41 $tmp40 $const27 	%argrw{"wrr"}
+	point		$tmp35 $tmp37 $tmp39 $tmp41 	%argrw{"wrrr"}
+	noise		$tmp34 $const6 $tmp35 	%argrw{"wrr"}
+	abs		$tmp33 $tmp34 	%argrw{"wr"}
+	smoothstep	$tmp32 $const16 $const24 $tmp33 	%argrw{"wrrr"}
+	sub		crackY $const15 $tmp32 	%argrw{"wrr"}
+# .\\shaders\\ice_crystal.osl:34
+#     float cracks = clamp(crackX * 0.55 + crackY * 0.45 + crackZ * 0.30, 0.0, 1.0);
+	compref		$tmp46 cq $const18 	%line{34} %argrw{"wrr"}
+	mul		$tmp47 $tmp46 $const30 	%argrw{"wrr"}
+	compref		$tmp48 cq $const20 	%argrw{"wrr"}
+	mul		$tmp49 $tmp48 $const31 	%argrw{"wrr"}
+	compref		$tmp50 cq $const22 	%argrw{"wrr"}
+	mul		$tmp51 $tmp50 $const32 	%argrw{"wrr"}
+	point		$tmp45 $tmp47 $tmp49 $tmp51 	%argrw{"wrrr"}
+	noise		$tmp44 $const6 $tmp45 	%argrw{"wrr"}
+	abs		$tmp43 $tmp44 	%argrw{"wr"}
+	smoothstep	$tmp42 $const28 $const29 $tmp43 	%argrw{"wrrr"}
+	sub		crackZ $const15 $tmp42 	%argrw{"wrr"}
+# .\\shaders\\ice_crystal.osl:35
+# 
+	mul		$tmp52 crackX $const33 	%line{35} %argrw{"wrr"}
+	mul		$tmp53 crackY $const34 	%argrw{"wrr"}
+	add		$tmp54 $tmp52 $tmp53 	%argrw{"wrr"}
+	mul		$tmp55 crackZ $const35 	%argrw{"wrr"}
+	add		$tmp56 $tmp54 $tmp55 	%argrw{"wrr"}
+	functioncall	$const37 70 	%argrw{"r"}
+# C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h:141
+# float  clamp (float x, float minval, float maxval) { return max(min(x,maxval),minval); }
+	min		$tmp57 $tmp56 $const15 	%filename{"C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h"} %line{141} %argrw{"wrr"}
+	max		cracks $tmp57 $const36 	%argrw{"wrr"}
+# .\\shaders\\ice_crystal.osl:38
+#     float scratchA = 1.0 - smoothstep(0.012, 0.055, abs(noise("perlin", point(sq[0] * 1.00, sq[1] * 0.10, sq[2] * 0.22))));
+	mul		sq q scratchScale 	%filename{".\\shaders\\ice_crystal.osl"} %line{38} %argrw{"wrr"}
+# .\\shaders\\ice_crystal.osl:39
+#     float scratchB = 1.0 - smoothstep(0.012, 0.060, abs(noise("perlin", point(sq[0] * 0.18, sq[1] * 1.00, sq[2] * 0.35))));
+	compref		$tmp62 sq $const18 	%line{39} %argrw{"wrr"}
+	mul		$tmp63 $tmp62 $const15 	%argrw{"wrr"}
+	compref		$tmp64 sq $const20 	%argrw{"wrr"}
+	mul		$tmp65 $tmp64 $const40 	%argrw{"wrr"}
+	compref		$tmp66 sq $const22 	%argrw{"wrr"}
+	mul		$tmp67 $tmp66 $const41 	%argrw{"wrr"}
+	point		$tmp61 $tmp63 $tmp65 $tmp67 	%argrw{"wrrr"}
+	noise		$tmp60 $const6 $tmp61 	%argrw{"wrr"}
+	abs		$tmp59 $tmp60 	%argrw{"wr"}
+	smoothstep	$tmp58 $const38 $const39 $tmp59 	%argrw{"wrrr"}
+	sub		scratchA $const15 $tmp58 	%argrw{"wrr"}
+# .\\shaders\\ice_crystal.osl:40
+#     float scratches = clamp((scratchA + scratchB) * 0.35, 0.0, 1.0);
+	compref		$tmp72 sq $const18 	%line{40} %argrw{"wrr"}
+	mul		$tmp73 $tmp72 $const43 	%argrw{"wrr"}
+	compref		$tmp74 sq $const20 	%argrw{"wrr"}
+	mul		$tmp75 $tmp74 $const15 	%argrw{"wrr"}
+	compref		$tmp76 sq $const22 	%argrw{"wrr"}
+	mul		$tmp77 $tmp76 $const44 	%argrw{"wrr"}
+	point		$tmp71 $tmp73 $tmp75 $tmp77 	%argrw{"wrrr"}
+	noise		$tmp70 $const6 $tmp71 	%argrw{"wrr"}
+	abs		$tmp69 $tmp70 	%argrw{"wr"}
+	smoothstep	$tmp68 $const38 $const42 $tmp69 	%argrw{"wrrr"}
+	sub		scratchB $const15 $tmp68 	%argrw{"wrr"}
+# .\\shaders\\ice_crystal.osl:41
+# 
+	add		$tmp78 scratchA scratchB 	%line{41} %argrw{"wrr"}
+	mul		$tmp79 $tmp78 $const44 	%argrw{"wrr"}
+	functioncall	$const37 98 	%argrw{"r"}
+# C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h:141
+# float  clamp (float x, float minval, float maxval) { return max(min(x,maxval),minval); }
+	min		$tmp80 $tmp79 $const15 	%filename{"C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h"} %line{141} %argrw{"wrr"}
+	max		scratches $tmp80 $const36 	%argrw{"wrr"}
+# .\\shaders\\ice_crystal.osl:44
+#     float edgeFrost = smoothstep(0.18, 0.82, facingEdge);
+	assign		$tmp83 Nn 	%filename{".\\shaders\\ice_crystal.osl"} %line{44} %argrw{"wr"}
+	dot		$tmp82 $tmp83 V 	%argrw{"wrr"}
+	abs		$tmp81 $tmp82 	%argrw{"wr"}
+	sub		facingEdge $const15 $tmp81 	%argrw{"wrr"}
+# .\\shaders\\ice_crystal.osl:45
+# 
+	smoothstep	edgeFrost $const43 $const45 facingEdge 	%line{45} %argrw{"wrrr"}
+# .\\shaders\\ice_crystal.osl:47
+#     float crackMask = clamp(cracks * 0.85 + scratches * 0.35, 0.0, 1.0);
+	mul		$tmp84 cloudyCore $const34 	%line{47} %argrw{"wrr"}
+	mul		$tmp85 cracks $const33 	%argrw{"wrr"}
+	add		$tmp86 $tmp84 $tmp85 	%argrw{"wrr"}
+	mul		$tmp87 scratches $const41 	%argrw{"wrr"}
+	add		$tmp88 $tmp86 $tmp87 	%argrw{"wrr"}
+	mul		$tmp89 edgeFrost $const32 	%argrw{"wrr"}
+	add		$tmp90 $tmp88 $tmp89 	%argrw{"wrr"}
+	functioncall	$const37 113 	%argrw{"r"}
+# C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h:141
+# float  clamp (float x, float minval, float maxval) { return max(min(x,maxval),minval); }
+	min		$tmp91 $tmp90 $const15 	%filename{"C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h"} %line{141} %argrw{"wrr"}
+	max		frostMask $tmp91 $const36 	%argrw{"wrr"}
+# .\\shaders\\ice_crystal.osl:48
+# 
+	mul		$tmp92 cracks $const46 	%filename{".\\shaders\\ice_crystal.osl"} %line{48} %argrw{"wrr"}
+	mul		$tmp93 scratches $const44 	%argrw{"wrr"}
+	add		$tmp94 $tmp92 $tmp93 	%argrw{"wrr"}
+	functioncall	$const37 119 	%argrw{"r"}
+# C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h:141
+# float  clamp (float x, float minval, float maxval) { return max(min(x,maxval),minval); }
+	min		$tmp95 $tmp94 $const15 	%filename{"C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h"} %line{141} %argrw{"wrr"}
+	max		crackMask $tmp95 $const36 	%argrw{"wrr"}
+# .\\shaders\\ice_crystal.osl:51
+#     iceColor = mix(milkyIce, crackColor, crackMask * 0.32);
+	mul		$tmp97 cloudyCore $const44 	%filename{".\\shaders\\ice_crystal.osl"} %line{51} %argrw{"wrr"}
+	mul		$tmp98 edgeFrost $const47 	%argrw{"wrr"}
+	add		$tmp99 $tmp97 $tmp98 	%argrw{"wrr"}
+	functioncall	$const37 125 	%argrw{"r"}
+# C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h:141
+# float  clamp (float x, float minval, float maxval) { return max(min(x,maxval),minval); }
+	min		$tmp100 $tmp99 $const15 	%filename{"C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h"} %line{141} %argrw{"wrr"}
+	max		$tmp96 $tmp100 $const36 	%argrw{"wrr"}
+# .\\shaders\\ice_crystal.osl:51
+#     iceColor = mix(milkyIce, crackColor, crackMask * 0.32);
+	mix		milkyIce clearIceColor frostColor $tmp96 	%filename{".\\shaders\\ice_crystal.osl"} %line{51} %argrw{"wrrr"}
+# .\\shaders\\ice_crystal.osl:52
+# 
+	mul		$tmp101 crackMask $const26 	%line{52} %argrw{"wrr"}
+	mix		iceColor milkyIce crackColor $tmp101 	%argrw{"wrrr"}
+# .\\shaders\\ice_crystal.osl:55
+#     frostGain = clamp(0.004 + cloudyCore * 0.040 + cracks * 0.100 + scratches * 0.035 + edgeFrost * 0.065, 0.004, 0.22);
+	mul		$tmp103 crackMask $const48 	%line{55} %argrw{"wrr"}
+	mul		$tmp104 edgeFrost $const49 	%argrw{"wrr"}
+	add		$tmp105 $tmp103 $tmp104 	%argrw{"wrr"}
+	functioncall	$const37 134 	%argrw{"r"}
+# C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h:141
+# float  clamp (float x, float minval, float maxval) { return max(min(x,maxval),minval); }
+	min		$tmp106 $tmp105 $const15 	%filename{"C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h"} %line{141} %argrw{"wrr"}
+	max		$tmp102 $tmp106 $const36 	%argrw{"wrr"}
+# .\\shaders\\ice_crystal.osl:55
+#     frostGain = clamp(0.004 + cloudyCore * 0.040 + cracks * 0.100 + scratches * 0.035 + edgeFrost * 0.065, 0.004, 0.22);
+	mix		frostDiffuse frostColor crackColor $tmp102 	%filename{".\\shaders\\ice_crystal.osl"} %line{55} %argrw{"wrrr"}
+# .\\shaders\\ice_crystal.osl:56
+# 
+	mul		$tmp107 cloudyCore $const51 	%line{56} %argrw{"wrr"}
+	add		$tmp108 $const50 $tmp107 	%argrw{"wrr"}
+	mul		$tmp109 cracks $const40 	%argrw{"wrr"}
+	add		$tmp110 $tmp108 $tmp109 	%argrw{"wrr"}
+	mul		$tmp111 scratches $const52 	%argrw{"wrr"}
+	add		$tmp112 $tmp110 $tmp111 	%argrw{"wrr"}
+	mul		$tmp113 edgeFrost $const53 	%argrw{"wrr"}
+	add		$tmp114 $tmp112 $tmp113 	%argrw{"wrr"}
+	functioncall	$const37 146 	%argrw{"r"}
+# C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h:141
+# float  clamp (float x, float minval, float maxval) { return max(min(x,maxval),minval); }
+	min		$tmp115 $tmp114 $const41 	%filename{"C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h"} %line{141} %argrw{"wrr"}
+	max		frostGain $tmp115 $const50 	%argrw{"wrr"}
+# .\\shaders\\ice_crystal.osl:59
+# 
+	mul		$tmp116 cloudyCore $const51 	%filename{".\\shaders\\ice_crystal.osl"} %line{59} %argrw{"wrr"}
+	add		$tmp117 $const38 $tmp116 	%argrw{"wrr"}
+	mul		$tmp118 cracks $const54 	%argrw{"wrr"}
+	add		$tmp119 $tmp117 $tmp118 	%argrw{"wrr"}
+	mul		$tmp120 scratches $const55 	%argrw{"wrr"}
+	add		$tmp121 $tmp119 $tmp120 	%argrw{"wrr"}
+	mul		$tmp122 edgeFrost $const56 	%argrw{"wrr"}
+	add		$tmp123 $tmp121 $tmp122 	%argrw{"wrr"}
+	functioncall	$const37 157 	%argrw{"r"}
+# C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h:141
+# float  clamp (float x, float minval, float maxval) { return max(min(x,maxval),minval); }
+	min		$tmp124 $tmp123 $const57 	%filename{"C:\\\\renderman\\\\RenderManProServer-27.2\\\\lib\\\\osl\\\\include\\\\stdosl.h"} %line{141} %argrw{"wrr"}
+	max		roughness $tmp124 $const38 	%argrw{"wrr"}
+# .\\shaders\\ice_crystal.osl:62
+#     point bumpedP = P + vector(Nn) * iceHeight;
+	mul		$tmp125 cloudyCore $const44 	%filename{".\\shaders\\ice_crystal.osl"} %line{62} %argrw{"wrr"}
+	mul		$tmp126 cracks $const58 	%argrw{"wrr"}
+	add		$tmp127 $tmp125 $tmp126 	%argrw{"wrr"}
+	mul		$tmp128 scratches $const34 	%argrw{"wrr"}
+	add		$tmp129 $tmp127 $tmp128 	%argrw{"wrr"}
+	mul		$tmp130 edgeFrost $const47 	%argrw{"wrr"}
+	add		$tmp131 $tmp129 $tmp130 	%argrw{"wrr"}
+	mul		iceHeight bumpStrength $tmp131 	%argrw{"wrr"}
+# .\\shaders\\ice_crystal.osl:63
+#     iceNormal = calculatenormal(bumpedP);
+	assign		$tmp132 Nn 	%line{63} %argrw{"wr"}
+	mul		$tmp133 $tmp132 iceHeight 	%argrw{"wrr"}
+	add		bumpedP P $tmp133 	%argrw{"wrr"}
+# .\\shaders\\ice_crystal.osl:64
+# }
+	calculatenormal	iceNormal bumpedP 	%line{64} %argrw{"wr"} %argderivs{1}
+	end
